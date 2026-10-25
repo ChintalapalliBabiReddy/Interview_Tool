@@ -4,7 +4,7 @@ const { createClient } = require("redis");
 // Create Redis client instance
 // Redis is running locally on port 6379 via Docker
 const redisClient = createClient({
-  url: "redis://localhost:6379",
+  url: process.env.REDIS_URL,
 });
 
 // Listen for Redis connection errors

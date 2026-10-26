@@ -1,4 +1,4 @@
-// Load environment variables from .env.
+
 require("dotenv").config();
 
 const express = require("express");
@@ -8,6 +8,7 @@ const authRoutes = require("./routes/authRoutes");
 const resumeRoutes = require("./routes/resumeRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const speechRoutes = require("./routes/speechRoutes");
+const { connectRedis } = require("./config/redisClient");
 
 const app = express();
 
@@ -21,6 +22,18 @@ app.use("/api/speech", speechRoutes);
 
 const PORT = process.env.PORT || 8080;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+async function startServer() {
+  try {
+    // Connect Redis before accepting requests.
+    await connectRedis();
+
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error("Failed to start server:", error.message);
+    process.exit(1);
+  }
+}
+
+startServer();

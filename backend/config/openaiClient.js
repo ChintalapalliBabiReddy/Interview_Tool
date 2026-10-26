@@ -3,9 +3,11 @@ const { DefaultAzureCredential } = require("@azure/identity");
 
 const endpoint = process.env.AZURE_AI_PROJECT_ENDPOINT;
 
+console.log("AI Project endpoint configured:", Boolean(endpoint));
+
 if (!endpoint || !endpoint.trim()) {
   throw new Error(
-    "Missing AZURE_AI_PROJECT_ENDPOINT in Azure App Service environment variables"
+    "AZURE_AI_PROJECT_ENDPOINT is missing in Azure App Service"
   );
 }
 

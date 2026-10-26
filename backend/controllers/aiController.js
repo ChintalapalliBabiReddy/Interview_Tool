@@ -12,21 +12,29 @@ const generateAnswer = async (req, res) => {
       });
     }
 
-    const openAIClient = projectClient.getOpenAIClient();
-
-    const response = await openAIClient.responses.create(
-      {
-        input: question.trim(),
+    // Connect to the existing Microsoft Foundry agent
+    const openAIClient = projectClient.getOpenAIClient({
+      azureConfig: {
+        allowPreview: true,
+        agentName: "my-first-agent",
       },
-      {
-        body: {
-          agent_reference: {
-            name: "my-first-agent",
-            type: "agent_reference",
-          },
+    });
+
+    // Create a conversation with the user's question
+    const conversation = await openAIClient.conversations.create({
+      items: [
+        {
+          type: "message",
+          role: "user",
+          content: question.trim(),
         },
-      }
-    );
+      ],
+    });
+
+    // Generate an answer using the Foundry agent
+    const response = await openAIClient.responses.create({
+      conversation: conversation.id,
+    });
 
     return res.status(200).json({
       success: true,

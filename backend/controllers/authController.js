@@ -1,77 +1,57 @@
-const sendMail = require("../utils/sendMail");
-const redisClient = require("../config/redisClient");
-
-// Generates OTP, stores it in Redis, and sends it via email
-const sendOtp = async (req, res) => {
-  try {
-    const { email } = req.body;
-
-    const otp = Math.floor(100000 + Math.random() * 900000);
-
-    await redisClient.set(email, otp, {
-      EX: 300,
-    });
-
-    await sendMail(email, otp);
-
-    return res.status(200).json({
-      success: true,
-      message: "OTP sent successfully",
-    });
-  } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Failed to send OTP",
-    });
-  }
-};
-
-// Verifies the OTP entered by the user
 const verifyOtp = async (req, res) => {
   try {
-    // Extract email and OTP from request body
-    const { email, otp } = req.body;
+    const { email, otp } = req.body || {};
 
-    // Get stored OTP from Redis
-    const storedOtp = await redisClient.get(email);
-
-    // Check if OTP exists
-    if (!storedOtp) {
+    if (
+      typeof email !== "string" ||
+      !email.trim() ||
+      (typeof otp !== "string" && typeof otp !== "number")
+    ) {
       return res.status(400).json({
         success: false,
-        message: "OTP expired or not found",
+        message: "Valid email and OTP are required"
       });
     }
 
-    // Compare entered OTP with stored OTP
-    if (storedOtp !== otp) {
+    const emailKey = email.trim().toLowerCase();
+    const enteredOtp = String(otp).trim();
+
+    if (!/^\d{6}$/.test(enteredOtp)) {
       return res.status(400).json({
         success: false,
-        message: "Invalid OTP",
+        message: "OTP must contain 6 digits"
       });
     }
 
-    // Remove OTP after successful verification
-    await redisClient.del(email);
+    const storedOtp = await redisClient.get(emailKey);
 
-    // Return success response
+    if (storedOtp === null) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired or not found"
+      });
+    }
+
+    if (storedOtp !== enteredOtp) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid OTP"
+      });
+    }
+
+    await redisClient.del(emailKey);
+
     return res.status(200).json({
       success: true,
-      message: "OTP verified successfully",
+      message: "OTP verified successfully"
     });
+
   } catch (error) {
-    console.error(error);
+    console.error("OTP verification error:", error);
 
     return res.status(500).json({
       success: false,
-      message: "OTP verification failed",
+      message: "OTP verification failed"
     });
   }
-};
-
-module.exports = {
-  sendOtp,
-  verifyOtp,
 };

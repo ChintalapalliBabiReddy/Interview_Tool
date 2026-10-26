@@ -1,13 +1,27 @@
 const { BlobServiceClient } = require("@azure/storage-blob");
 
-// Connect to Azure Storage using the connection string
-const blobServiceClient = BlobServiceClient.fromConnectionString(
-  process.env.AZURE_STORAGE_CONNECTION_STRING
-);
+const connectionString =
+  process.env.AZURE_STORAGE_CONNECTION_STRING;
 
-// Get the resumes container
-const containerClient = blobServiceClient.getContainerClient(
-  process.env.AZURE_STORAGE_CONTAINER_NAME
-);
+const containerName =
+  process.env.AZURE_STORAGE_CONTAINER_NAME;
+
+if (!connectionString) {
+  throw new Error(
+    "Missing AZURE_STORAGE_CONNECTION_STRING"
+  );
+}
+
+if (!containerName) {
+  throw new Error(
+    "Missing AZURE_STORAGE_CONTAINER_NAME"
+  );
+}
+
+const blobServiceClient =
+  BlobServiceClient.fromConnectionString(connectionString);
+
+const containerClient =
+  blobServiceClient.getContainerClient(containerName);
 
 module.exports = { containerClient };

@@ -1,7 +1,8 @@
 
  // Backend API base URL
-export const API_BASE_URL = "http://localhost:8080/api";
-
+export const API_BASE_URL =
+  "https://ai-interview-backend-dafdacbndpgfczbw.southindia-01.azurewebsites.net/api";
+  
 // Authentication and other API endpoints
 export const AUTH_API = {
   SEND_OTP: `${API_BASE_URL}/auth/send-otp`,

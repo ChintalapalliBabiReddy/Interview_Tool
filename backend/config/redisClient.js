@@ -1,27 +1,28 @@
-// Import Redis client creation function
 const { createClient } = require("redis");
 
-// Create Redis client instance
-// Redis is running locally on port 6379 via Docker
 const redisClient = createClient({
-  url: process.env.REDIS_URL,
+  username: process.env.REDIS_USERNAME || "default",
+  password: process.env.REDIS_PASSWORD,
+  socket: {
+    host: process.env.REDIS_HOST,
+    port: Number(process.env.REDIS_PORT || 10000),
+    tls: true,
+    reconnectStrategy: (retries) =>
+      Math.min(retries * 100, 3000),
+  },
 });
 
-// Listen for Redis connection errors
-// This helps during debugging if Redis is down
 redisClient.on("error", (err) => {
-  console.log("Redis Error:", err);
+  console.error("Redis Error:", err.message);
 });
 
-// Immediately Invoked Async Function (IIFE)
-// Used because connect() returns a Promise
 (async () => {
-  // Establish connection between Node.js application and Redis server
-  await redisClient.connect();
-
-  console.log("Redis Connected");
+  try {
+    await redisClient.connect();
+    console.log("Azure Redis Connected Successfully");
+  } catch (err) {
+    console.error("Redis Connection Failed:", err.message);
+  }
 })();
 
-// Export Redis client so it can be used
-// in controllers, services, and other files
 module.exports = redisClient;

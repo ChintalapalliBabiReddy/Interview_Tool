@@ -14,6 +14,7 @@ const redisClient = createCluster({
 
     socket: {
       tls: true,
+      servername: process.env.REDIS_HOST,
       connectTimeout: 10000,
       reconnectStrategy: (retries) =>
         Math.min(retries * 200, 3000),
@@ -25,13 +26,17 @@ redisClient.on("error", (err) => {
   console.error("Redis Cluster Error:", err.message);
 });
 
-(async () => {
-  try {
+async function connectRedis() {
+  if (!redisClient.isOpen) {
     await redisClient.connect();
-    console.log("Azure Redis Cluster Connected Successfully");
-  } catch (err) {
-    console.error("Redis Cluster Connection Failed:", err.message);
   }
-})();
+
+  if (!redisClient.isReady) {
+    throw new Error("Redis cluster is not ready");
+  }
+
+  console.log("Azure Redis Cluster Connected Successfully");
+}
 
 module.exports = redisClient;
+module.exports.connectRedis = connectRedis;

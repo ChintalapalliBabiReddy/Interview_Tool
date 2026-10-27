@@ -1,4 +1,3 @@
-
 import {
   useState,
   useImperativeHandle,
@@ -10,7 +9,7 @@ import { FaSearch } from "react-icons/fa";
 import { AUTH_API } from "../constants/apiConstants";
 
 const QuestionInputPanel = forwardRef(function QuestionInputPanel(
-  { onAnswerGenerated, onLoadingChange },
+  { onAnswerGenerated, onLoadingChange, interviewSessionId },
   ref
 ) {
   const [question, setQuestion] = useState("");
@@ -26,24 +25,36 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
       if (!questionToSend || isLoading) return;
 
+      // A session must be initialized before questions can be submitted.
+      if (!interviewSessionId) {
+        setError("Please start the interview before generating answers.");
+        return;
+      }
+
       setIsLoading(true);
       onLoadingChange?.(true);
       setError("");
 
       let accumulatedAnswer = "";
+      const uiRequestStart = performance.now();
+      let uiFirstTextAt = null;
+      let uiCompletedAt = null;
+      let backendMetrics = {};
 
       try {
-        const response = await fetch(
-          AUTH_API.AI_API_GENERATE_ANSWER,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Accept: "text/event-stream",
-            },
-            body: JSON.stringify({ question: questionToSend }),
-          }
-        );
+        const response = await fetch(AUTH_API.AI_API_GENERATE_ANSWER, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "text/event-stream",
+          },
+          body: JSON.stringify({
+            question: questionToSend,
+            interviewSessionId,
+          }),
+        });
+
+        const uiResponseHeadersAt = performance.now();
 
         if (!response.ok) {
           const result = await response.json().catch(() => ({}));
@@ -53,7 +64,9 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
         }
 
         if (!response.body) {
-          throw new Error("Streaming is not supported by this response");
+          throw new Error(
+            "Streaming is not supported by this response"
+          );
         }
 
         const reader = response.body.getReader();
@@ -71,10 +84,25 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
           const payload = JSON.parse(dataLines.join("\n"));
 
-          if (payload.type === "delta" && payload.text) {
+          if (
+            payload.type === "timing" ||
+            payload.type === "metrics"
+          ) {
+            backendMetrics = {
+              ...backendMetrics,
+              ...(payload.metrics || {}),
+            };
+          } else if (payload.type === "delta" && payload.text) {
             accumulatedAnswer += payload.text;
 
-            // Update the UI immediately as text arrives.
+            if (
+              uiFirstTextAt === null &&
+              payload.text.trim().length > 0
+            ) {
+              uiFirstTextAt = performance.now();
+            }
+
+            // Update the existing answer while the AI streams.
             onAnswerGenerated({
               question: questionToSend,
               answer: accumulatedAnswer,
@@ -91,7 +119,6 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
         while (true) {
           const { value, done } = await reader.read();
-
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
@@ -118,11 +145,34 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
           throw new Error("The AI returned an empty answer");
         }
 
-        // Mark the answer as complete.
+        uiCompletedAt = performance.now();
+
+        const metrics = {
+          uiRequestStartAt: new Date().toISOString(),
+          uiResponseHeadersMs: Math.round(
+            uiResponseHeadersAt - uiRequestStart
+          ),
+          uiFirstTextMs:
+            uiFirstTextAt === null
+              ? null
+              : Math.round(uiFirstTextAt - uiRequestStart),
+          uiAnswerStreamingMs:
+            uiFirstTextAt === null
+              ? null
+              : Math.round(uiCompletedAt - uiFirstTextAt),
+          uiTotalDurationMs: Math.round(
+            uiCompletedAt - uiRequestStart
+          ),
+          ...backendMetrics,
+        };
+
+        console.table(metrics);
+
         onAnswerGenerated({
           question: questionToSend,
           answer: accumulatedAnswer,
           streaming: false,
+          metrics,
         });
 
         if (!isAudioQuestion) {
@@ -136,7 +186,13 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
         onLoadingChange?.(false);
       }
     },
-    [question, isLoading, onAnswerGenerated, onLoadingChange]
+    [
+      question,
+      isLoading,
+      interviewSessionId,
+      onAnswerGenerated,
+      onLoadingChange,
+    ]
   );
 
   useImperativeHandle(
@@ -158,13 +214,21 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
       />
 
       <div className="input-footer">
-        {error && <span className="error-message">{error}</span>}
+        {error && (
+          <span className="error-message" role="alert">
+            {error}
+          </span>
+        )}
 
         <button
           type="button"
           className="generate-btn"
           onClick={() => handleGenerateAnswer()}
-          disabled={!question.trim() || isLoading}
+          disabled={
+            !question.trim() ||
+            isLoading ||
+            !interviewSessionId
+          }
           aria-label="Generate answer for manually typed question"
         >
           <FaSearch />

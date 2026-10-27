@@ -23,6 +23,10 @@ function Panel() {
   const [interviewStarted, setInterviewStarted] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [candidateDetails, setCandidateDetails] = useState(null);
+  const [interviewSessionId, setInterviewSessionId] = useState(null);
+  const [isStartingInterview, setIsStartingInterview] = useState(false);
+  const [startError, setStartError] = useState("");
+
   const [resumeFile, setResumeFile] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
@@ -49,8 +53,51 @@ function Panel() {
     setTranscript(text);
   }, []);
 
+  const handleStartInterview = async (interviewDetails) => {
+    if (isStartingInterview) return;
+
+    setIsStartingInterview(true);
+    setStartError("");
+
+    try {
+      const response = await fetch(AUTH_API.INTERVIEW_SESSION_API, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: interviewDetails.name.trim(),
+          email: interviewDetails.email.trim(),
+          company: interviewDetails.company.trim(),
+          round: interviewDetails.round,
+          durationMinutes: Number(interviewDetails.duration),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success || !result.interviewSessionId) {
+        throw new Error(
+          result.message || "Failed to initialize interview session",
+        );
+      }
+
+      setInterviewSessionId(result.interviewSessionId);
+      setCandidateDetails(interviewDetails);
+      setTimeLeft(Number(interviewDetails.duration) * 60);
+      setInterviewStarted(true);
+      setShowModal(false);
+
+      console.log("Interview session initialized successfully");
+    } catch (error) {
+      console.error("Interview initialization failed:", error);
+      setStartError(error.message || "Failed to start interview");
+    } finally {
+      setIsStartingInterview(false);
+    }
+  };
+
   const handleAudioQuestionAnswer = useCallback(() => {
-    // Prevent duplicate clicks before React updates the UI.
     if (submittingQuestionRef.current) return;
 
     const questionText =
@@ -74,15 +121,11 @@ function Panel() {
       },
     ]);
 
-    // Clear immediately so the next spoken question starts fresh.
     speechToTextRef.current?.clearCurrentTranscript();
     setTranscript("");
 
-    // Submit the immutable text snapshot to the existing AI API.
     questionInputRef.current?.generateAnswer(questionText);
 
-    // Release the click guard on the next event-loop turn.
-    // The input panel's loading state still controls the button UI.
     window.setTimeout(() => {
       submittingQuestionRef.current = false;
     }, 0);
@@ -147,7 +190,6 @@ function Panel() {
 
   const handleAnswerGenerated = useCallback((item) => {
     setAnswerHistory((previousHistory) => {
-      // Update the existing answer while it is streaming.
       const existingIndex = previousHistory.findIndex(
         (entry) => entry.question === item.question,
       );
@@ -163,7 +205,6 @@ function Panel() {
         return updatedHistory;
       }
 
-      // Create a new entry only when the question first arrives.
       const updatedHistory = [...previousHistory, item];
 
       setCurrentAnswerIndex(updatedHistory.length - 1);
@@ -186,14 +227,21 @@ function Panel() {
     <>
       {showModal && (
         <InterviewSetupModal
-          onClose={() => setShowModal(false)}
-          onSubmit={(interviewDetails) => {
-            setCandidateDetails(interviewDetails);
-            setTimeLeft(Number(interviewDetails.duration) * 60);
-            setInterviewStarted(true);
-            setShowModal(false);
+          onClose={() => {
+            if (!isStartingInterview) {
+              setShowModal(false);
+              setStartError("");
+            }
           }}
+          onSubmit={handleStartInterview}
+          isSubmitting={isStartingInterview}
         />
+      )}
+
+      {startError && (
+        <div className="error-message" role="alert">
+          {startError}
+        </div>
       )}
 
       <div className="panel-container">
@@ -203,7 +251,11 @@ function Panel() {
               {!interviewStarted ? (
                 <button
                   className="start-btn"
-                  onClick={() => setShowModal(true)}
+                  onClick={() => {
+                    setStartError("");
+                    setShowModal(true);
+                  }}
+                  disabled={isStartingInterview}
                 >
                   <FaPlay />
                   Start
@@ -232,6 +284,7 @@ function Panel() {
                 ) : (
                   <FaFileAlt />
                 )}
+
                 <span>Resume</span>
 
                 <input
@@ -291,6 +344,7 @@ function Panel() {
                 ref={questionInputRef}
                 onAnswerGenerated={handleAnswerGenerated}
                 onLoadingChange={setIsGeneratingAnswer}
+                interviewSessionId={interviewSessionId}
               />
             </div>
           </div>

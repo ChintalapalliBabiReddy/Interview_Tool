@@ -181,3 +181,33 @@
 .answer-placeholder p {
   font-weight: 600;
 }
+
+
+.performance-diagnostics {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid #64748b;
+  font-size: 13px;
+}
+
+.performance-diagnostics h4 {
+  margin-bottom: 12px;
+}
+
+.diagnostic-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.diagnostic-row span:first-child {
+  color: #cbd5e1;
+}
+
+.diagnostic-row span:last-child {
+  text-align: right;
+  overflow-wrap: anywhere;
+}

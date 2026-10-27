@@ -1,16 +1,11 @@
-import {
-  useState,
-  useImperativeHandle,
-  forwardRef,
-  useCallback,
-} from "react";
+import { useState, useImperativeHandle, forwardRef, useCallback } from "react";
 import "../styles/QuestionInputPanel.css";
 import { FaSearch } from "react-icons/fa";
 import { AUTH_API } from "../constants/apiConstants";
 
 const QuestionInputPanel = forwardRef(function QuestionInputPanel(
   { onAnswerGenerated, onLoadingChange, interviewSessionId },
-  ref
+  ref,
 ) {
   const [question, setQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -19,15 +14,15 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
   const handleGenerateAnswer = useCallback(
     async (questionText) => {
       const isAudioQuestion = typeof questionText === "string";
-      const questionToSend = (
-        isAudioQuestion ? questionText : question
-      ).trim();
+      const questionToSend = (isAudioQuestion ? questionText : question).trim();
 
       if (!questionToSend || isLoading) return;
 
       // A session must be initialized before questions can be submitted.
       if (!interviewSessionId) {
-        setError("Please start the interview before generating answers.");
+        window.alert(
+          "Please add your profile details and start the interview before asking questions.",
+        );
         return;
       }
 
@@ -58,15 +53,11 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
         if (!response.ok) {
           const result = await response.json().catch(() => ({}));
-          throw new Error(
-            result.message || "Failed to generate answer"
-          );
+          throw new Error(result.message || "Failed to generate answer");
         }
 
         if (!response.body) {
-          throw new Error(
-            "Streaming is not supported by this response"
-          );
+          throw new Error("Streaming is not supported by this response");
         }
 
         const reader = response.body.getReader();
@@ -84,10 +75,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
           const payload = JSON.parse(dataLines.join("\n"));
 
-          if (
-            payload.type === "timing" ||
-            payload.type === "metrics"
-          ) {
+          if (payload.type === "timing" || payload.type === "metrics") {
             backendMetrics = {
               ...backendMetrics,
               ...(payload.metrics || {}),
@@ -95,10 +83,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
           } else if (payload.type === "delta" && payload.text) {
             accumulatedAnswer += payload.text;
 
-            if (
-              uiFirstTextAt === null &&
-              payload.text.trim().length > 0
-            ) {
+            if (uiFirstTextAt === null && payload.text.trim().length > 0) {
               uiFirstTextAt = performance.now();
             }
 
@@ -111,9 +96,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
           } else if (payload.type === "done") {
             completed = true;
           } else if (payload.type === "error") {
-            throw new Error(
-              payload.message || "Failed to generate answer"
-            );
+            throw new Error(payload.message || "Failed to generate answer");
           }
         };
 
@@ -149,9 +132,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
         const metrics = {
           uiRequestStartAt: new Date().toISOString(),
-          uiResponseHeadersMs: Math.round(
-            uiResponseHeadersAt - uiRequestStart
-          ),
+          uiResponseHeadersMs: Math.round(uiResponseHeadersAt - uiRequestStart),
           uiFirstTextMs:
             uiFirstTextAt === null
               ? null
@@ -160,9 +141,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
             uiFirstTextAt === null
               ? null
               : Math.round(uiCompletedAt - uiFirstTextAt),
-          uiTotalDurationMs: Math.round(
-            uiCompletedAt - uiRequestStart
-          ),
+          uiTotalDurationMs: Math.round(uiCompletedAt - uiRequestStart),
           ...backendMetrics,
         };
 
@@ -192,7 +171,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
       interviewSessionId,
       onAnswerGenerated,
       onLoadingChange,
-    ]
+    ],
   );
 
   useImperativeHandle(
@@ -200,7 +179,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
     () => ({
       generateAnswer: handleGenerateAnswer,
     }),
-    [handleGenerateAnswer]
+    [handleGenerateAnswer],
   );
 
   return (
@@ -224,11 +203,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
           type="button"
           className="generate-btn"
           onClick={() => handleGenerateAnswer()}
-          disabled={
-            !question.trim() ||
-            isLoading ||
-            !interviewSessionId
-          }
+          disabled={!question.trim() || isLoading}
           aria-label="Generate answer for manually typed question"
         >
           <FaSearch />

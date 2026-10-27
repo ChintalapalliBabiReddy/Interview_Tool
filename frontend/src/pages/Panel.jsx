@@ -1,4 +1,3 @@
-
 import AnswerPanel from "../components/Answer";
 import QuestionInputPanel from "../components/QuestionInputPanel";
 import QuestionList from "../components/QuestionList";
@@ -148,8 +147,27 @@ function Panel() {
 
   const handleAnswerGenerated = useCallback((item) => {
     setAnswerHistory((previousHistory) => {
+      // Update the existing answer while it is streaming.
+      const existingIndex = previousHistory.findIndex(
+        (entry) => entry.question === item.question,
+      );
+
+      if (existingIndex !== -1) {
+        const updatedHistory = [...previousHistory];
+
+        updatedHistory[existingIndex] = {
+          ...updatedHistory[existingIndex],
+          ...item,
+        };
+
+        return updatedHistory;
+      }
+
+      // Create a new entry only when the question first arrives.
       const updatedHistory = [...previousHistory, item];
+
       setCurrentAnswerIndex(updatedHistory.length - 1);
+
       return updatedHistory;
     });
   }, []);
@@ -191,9 +209,7 @@ function Panel() {
                   Start
                 </button>
               ) : (
-                <button className="timer-btn">
-                  ⏱ {formatTime(timeLeft)}
-                </button>
+                <button className="timer-btn">⏱ {formatTime(timeLeft)}</button>
               )}
 
               <ScreenShare onStreamChange={setAudioStream} />

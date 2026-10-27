@@ -19,47 +19,117 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
   const handleGenerateAnswer = useCallback(
     async (questionText) => {
-      // An argument means the request came from a finalized audio question.
-      // No argument means it came from the manual textarea's search button.
       const isAudioQuestion = typeof questionText === "string";
       const questionToSend = (
         isAudioQuestion ? questionText : question
       ).trim();
 
-      if (!questionToSend || isLoading) {
-        return;
-      }
+      if (!questionToSend || isLoading) return;
 
       setIsLoading(true);
       onLoadingChange?.(true);
       setError("");
 
+      let accumulatedAnswer = "";
+
       try {
-        const response = await fetch(AUTH_API.AI_API_GENERATE_ANSWER, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ question: questionToSend }),
-        });
+        const response = await fetch(
+          AUTH_API.AI_API_GENERATE_ANSWER,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "text/event-stream",
+            },
+            body: JSON.stringify({ question: questionToSend }),
+          }
+        );
 
-        const result = await response.json();
-
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || "Failed to generate answer");
+        if (!response.ok) {
+          const result = await response.json().catch(() => ({}));
+          throw new Error(
+            result.message || "Failed to generate answer"
+          );
         }
 
+        if (!response.body) {
+          throw new Error("Streaming is not supported by this response");
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let completed = false;
+
+        const processEvent = (eventText) => {
+          const dataLines = eventText
+            .split(/\r?\n/)
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).trimStart());
+
+          if (!dataLines.length) return;
+
+          const payload = JSON.parse(dataLines.join("\n"));
+
+          if (payload.type === "delta" && payload.text) {
+            accumulatedAnswer += payload.text;
+
+            // Update the UI immediately as text arrives.
+            onAnswerGenerated({
+              question: questionToSend,
+              answer: accumulatedAnswer,
+              streaming: true,
+            });
+          } else if (payload.type === "done") {
+            completed = true;
+          } else if (payload.type === "error") {
+            throw new Error(
+              payload.message || "Failed to generate answer"
+            );
+          }
+        };
+
+        while (true) {
+          const { value, done } = await reader.read();
+
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const events = buffer.split(/\r?\n\r?\n/);
+          buffer = events.pop() || "";
+
+          for (const eventText of events) {
+            processEvent(eventText);
+          }
+        }
+
+        buffer += decoder.decode();
+
+        if (buffer.trim()) {
+          processEvent(buffer);
+        }
+
+        if (!completed) {
+          throw new Error("The answer stream ended unexpectedly");
+        }
+
+        if (!accumulatedAnswer.trim()) {
+          throw new Error("The AI returned an empty answer");
+        }
+
+        // Mark the answer as complete.
         onAnswerGenerated({
-          question: result.question || questionToSend,
-          answer: result.answer,
+          question: questionToSend,
+          answer: accumulatedAnswer,
+          streaming: false,
         });
 
-        // Clear the textarea only for a manually submitted question.
         if (!isAudioQuestion) {
           setQuestion("");
         }
       } catch (error) {
-        console.error("AI answer generation failed:", error);
+        console.error("AI answer streaming failed:", error);
         setError(error.message || "Unable to generate answer");
       } finally {
         setIsLoading(false);

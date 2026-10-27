@@ -12,7 +12,6 @@ const generateAnswer = async (req, res) => {
       });
     }
 
-    // Connect to the existing Microsoft Foundry agent
     const openAIClient = projectClient.getOpenAIClient({
       azureConfig: {
         allowPreview: true,
@@ -20,7 +19,7 @@ const generateAnswer = async (req, res) => {
       },
     });
 
-    // Create a conversation with the user's question
+    // Create the conversation using the existing agent workflow.
     const conversation = await openAIClient.conversations.create({
       items: [
         {
@@ -31,17 +30,47 @@ const generateAnswer = async (req, res) => {
       ],
     });
 
-    // Generate an answer using the Foundry agent
-    const response = await openAIClient.responses.create({
+    // Tell the browser that the response will arrive as a stream.
+    res.status(200);
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    res.flushHeaders?.();
+
+    // Request a streamed response from the Foundry agent.
+    const stream = await openAIClient.responses.create({
       conversation: conversation.id,
+      stream: true,
     });
 
-    return res.status(200).json({
-      success: true,
-      question: question.trim(),
-      answer: response.output_text,
-    });
+    for await (const event of stream) {
+      if (res.destroyed || res.writableEnded) {
+        break;
+      }
 
+      // Forward each generated text fragment immediately.
+      if (event.type === "response.output_text.delta" && event.delta) {
+        res.write(`data: ${JSON.stringify({
+          type: "delta",
+          text: event.delta,
+        })}\n\n`);
+      }
+
+      if (event.type === "response.completed") {
+        res.write(`data: ${JSON.stringify({
+          type: "done",
+        })}\n\n`);
+      }
+
+      if (event.type === "response.failed") {
+        throw new Error("The AI response failed");
+      }
+    }
+
+    if (!res.writableEnded) {
+      res.end();
+    }
   } catch (error) {
     console.error("AI answer generation failed:", {
       status: error.status,
@@ -50,10 +79,20 @@ const generateAnswer = async (req, res) => {
       details: error.error,
     });
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to generate an answer",
-    });
+    if (res.headersSent) {
+      if (!res.destroyed && !res.writableEnded) {
+        res.write(`data: ${JSON.stringify({
+          type: "error",
+          message: "Failed to generate an answer",
+        })}\n\n`);
+        res.end();
+      }
+    } else {
+      res.status(500).json({
+        success: false,
+        message: "Failed to generate an answer",
+      });
+    }
   }
 };
 

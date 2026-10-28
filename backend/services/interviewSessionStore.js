@@ -10,7 +10,11 @@ function sessionKey(interviewSessionId) {
   return `interview:${interviewSessionId}`;
 }
 
-async function createSession({ conversationId, details }) {
+async function createSession({
+  conversationId,
+  details,
+  resumeText = "",
+}) {
   if (!conversationId || !details) {
     throw new Error("Conversation ID and session details are required");
   }
@@ -20,7 +24,11 @@ async function createSession({ conversationId, details }) {
   const session = {
     interviewSessionId,
     conversationId,
-    details,
+    details: {
+      ...details,
+      ...(resumeText ? { resumeText } : {}),
+    },
+    aiHistory: [],
     status: "active",
     createdAt: new Date().toISOString(),
   };
@@ -53,10 +61,43 @@ async function getSession(interviewSessionId) {
   return JSON.parse(value);
 }
 
+async function appendExchange(interviewSessionId, question, answer) {
+  const session = await getSession(interviewSessionId);
+
+  if (!session || session.status !== "active") {
+    return false;
+  }
+
+  session.aiHistory ??= [];
+
+  session.aiHistory.push(
+    { role: "user", content: question },
+    { role: "assistant", content: answer }
+  );
+
+  // Preserve the remaining session TTL instead of resetting
+  // the full duration whenever history is updated.
+  const remainingTtl = await redisClient.ttl(
+    sessionKey(interviewSessionId)
+  );
+
+  if (remainingTtl <= 0) {
+    return false;
+  }
+
+  await redisClient.set(
+    sessionKey(interviewSessionId),
+    JSON.stringify(session),
+    { EX: remainingTtl }
+  );
+
+  return true;
+}
+
 async function endSession(interviewSessionId) {
   const session = await getSession(interviewSessionId);
 
-  if (!session) {
+  if (!session || session.status !== "active") {
     return null;
   }
 
@@ -68,5 +109,6 @@ async function endSession(interviewSessionId) {
 module.exports = {
   createSession,
   getSession,
+  appendExchange,
   endSession,
 };

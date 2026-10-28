@@ -6,9 +6,7 @@ import InterviewSetupModal from "../components/InterviewSetupModal";
 import ScreenShare from "../components/ScreenShare";
 import Download from "../components/Download";
 import { FaFileAlt, FaPlay } from "react-icons/fa";
-
 import "../styles/Panel.css";
-
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { AUTH_API } from "../constants/apiConstants";
@@ -28,6 +26,7 @@ function Panel() {
   const [startError, setStartError] = useState("");
 
   const [resumeFile, setResumeFile] = useState(null);
+  const [resumeId, setResumeId] = useState(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
   const [isGeneratingAnswer, setIsGeneratingAnswer] = useState(false);
@@ -56,6 +55,11 @@ function Panel() {
   const handleStartInterview = async (interviewDetails) => {
     if (isStartingInterview) return;
 
+    if (!resumeId) {
+      window.alert("Please upload and process your resume before starting.");
+      return;
+    }
+
     setIsStartingInterview(true);
     setStartError("");
 
@@ -71,6 +75,7 @@ function Panel() {
           company: interviewDetails.company.trim(),
           round: interviewDetails.round,
           durationMinutes: Number(interviewDetails.duration),
+          resumeId,
         }),
       });
 
@@ -88,7 +93,7 @@ function Panel() {
       setInterviewStarted(true);
       setShowModal(false);
 
-      console.log("Interview session initialized successfully");
+      console.log("Interview session initialized with resume context.");
     } catch (error) {
       console.error("Interview initialization failed:", error);
       setStartError(error.message || "Failed to start interview");
@@ -160,9 +165,19 @@ function Panel() {
     const selectedFile = event.target.files?.[0];
     if (!selectedFile) return;
 
+    const extension = selectedFile.name.split(".").pop().toLowerCase();
+
+    if (!["pdf", "docx"].includes(extension)) {
+      window.alert("Please upload a PDF or DOCX resume.");
+      event.target.value = "";
+      return;
+    }
+
     const formData = new FormData();
     formData.append("resume", selectedFile);
+
     setIsUploading(true);
+    setStartError("");
 
     try {
       const response = await fetch(AUTH_API.RESUME_UPLOAD_API, {
@@ -176,12 +191,26 @@ function Panel() {
         throw new Error(result.message || "Resume upload failed");
       }
 
+      if (!result.resumeId) {
+        throw new Error(
+          "The server did not return a resume ID. Please try uploading again.",
+        );
+      }
+
       setResumeFile(selectedFile);
-      alert("Resume uploaded successfully!");
-      console.log("Resume upload response:", result);
+      setResumeId(result.resumeId);
+
+      console.log("Resume uploaded and processed successfully.", {
+        fileName: result.fileName,
+        resumeId: result.resumeId,
+      });
+
+      window.alert("Resume uploaded and processed successfully!");
     } catch (error) {
       console.error("Resume upload failed:", error);
-      alert(error.message || "Failed to upload resume");
+      setResumeFile(null);
+      setResumeId(null);
+      window.alert(error.message || "Failed to upload resume");
     } finally {
       setIsUploading(false);
       event.target.value = "";
@@ -289,9 +318,11 @@ function Panel() {
 
                 <input
                   type="file"
-                  accept=".pdf,.doc,.docx"
+                  accept=".pdf,.docx"
                   onChange={handleResumeUpload}
-                  disabled={isUploading || Boolean(resumeFile)}
+                  disabled={
+                    isUploading || Boolean(resumeFile) || interviewStarted
+                  }
                   hidden
                 />
               </label>
@@ -352,7 +383,9 @@ function Panel() {
           <AnswerPanel
             history={answerHistory}
             currentIndex={currentAnswerIndex}
-            onPrevious={handlePreviousAnswer}
+            onPrevious={() =>
+              setCurrentAnswerIndex((index) => Math.max(0, index - 1))
+            }
             onNext={handleNextAnswer}
           />
         </div>

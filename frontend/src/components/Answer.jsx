@@ -15,10 +15,10 @@ function Answer({ history, currentIndex, onPrevious, onNext }) {
 
   const aiCallType =
     aiRoute === "agent"
-      ? `Agent — ${aiTarget || "my-first-agent"}`
+      ? `Agent - AI call`
       : aiRoute === "direct_model"
-        ? `Direct model — ${aiTarget || "gpt-4.1-mini"}`
-        : "Not available";
+        ? `Model - AI call`
+        : "AI call unknown";
 
   return (
     <div className="answer-panel">
@@ -57,24 +57,32 @@ function Answer({ history, currentIndex, onPrevious, onNext }) {
           <div className="answer-text">{currentItem.answer}</div>
 
           {!currentItem.streaming && (
-            <section className="performance-diagnostics">
-              <h4>Performance Diagnostics</h4>
+            <div className="performance-summary">
+              <span className="summary-time">
+                {formatDuration(metrics?.uiFirstTextMs)} First response
+              </span>
 
-              <div className="diagnostic-row">
-                <span>AI call type</span>
-                <span>{aiCallType}</span>
-              </div>
+              <span className="summary-separator">|</span>
 
-              <div className="diagnostic-row">
-                <span>First response time</span>
-                <span>{formatDuration(metrics?.uiFirstTextMs)}</span>
-              </div>
+              <span className="summary-time">
+                {formatDuration(metrics?.uiTotalDurationMs)} Total completion
+              </span>
 
-              <div className="diagnostic-row">
-                <span>Total completion time</span>
-                <span>{formatDuration(metrics?.uiTotalDurationMs)}</span>
-              </div>
-            </section>
+              <span className="summary-separator">|</span>
+
+              <span
+                className={
+                  aiRoute === "agent"
+                    ? "ai-route-label agent-route"
+                    : aiRoute === "direct_model"
+                      ? "ai-route-label model-route"
+                      : "ai-route-label"
+                }
+                title={aiTarget || "AI route unavailable"}
+              >
+                {aiCallType}
+              </span>
+            </div>
           )}
         </div>
       ) : (

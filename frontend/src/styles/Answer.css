@@ -28,7 +28,7 @@
 .answer-header h3 {
   margin: 0;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .page-navigation {
@@ -66,6 +66,7 @@
   min-width: 48px;
   text-align: center;
   font-size: 14px;
+  font-weight: 600;
   color: #e5e7eb;
 }
 
@@ -79,7 +80,7 @@
 .answer-content h4 {
   margin: 0 0 12px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   color: #93c5fd;
 }
 
@@ -90,16 +91,55 @@
   border-left: 4px solid #3b82f6;
   border-radius: 6px;
   font-size: 16px;
+  font-weight: 700;
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
 
 .answer-text {
   font-size: 15px;
+  font-weight: 700;
   line-height: 1.8;
   color: #f3f4f6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.performance-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+  padding: 10px 12px;
+  border: 1px solid #475569;
+  border-radius: 8px;
+  background: #293548;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.summary-time {
+  color: #86efac;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.summary-separator {
+  color: #94a3b8;
+}
+
+.ai-route-label {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.agent-route {
+  color: #93c5fd;
+}
+
+.model-route {
+  color: #86efac;
 }
 
 .answer-placeholder {
@@ -116,6 +156,7 @@
 .answer-placeholder h3 {
   margin: 0 0 12px;
   font-size: 22px;
+  font-weight: 700;
   color: #f9fafb;
 }
 
@@ -124,6 +165,7 @@
   max-width: 420px;
   color: #cbd5e1;
   font-size: 15px;
+  font-weight: 600;
   line-height: 1.6;
 }
 
@@ -152,62 +194,9 @@
   .answer-content {
     padding: 20px 2px;
   }
-}
 
-.answer-header h3 {
-  font-weight: 700;
-}
-
-.page-navigation span {
-  font-weight: 600;
-}
-
-.answer-content h4 {
-  font-weight: 700;
-}
-
-.answer-question {
-  font-weight: 700;
-}
-
-.answer-text {
-  font-weight: 700;
-}
-
-.answer-placeholder h3 {
-  font-weight: 700;
-}
-
-.answer-placeholder p {
-  font-weight: 600;
-}
-
-
-.performance-diagnostics {
-  margin-top: 28px;
-  padding-top: 16px;
-  border-top: 1px solid #64748b;
-  font-size: 13px;
-}
-
-.performance-diagnostics h4 {
-  margin-bottom: 12px;
-}
-
-.diagnostic-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
-}
-
-.diagnostic-row span:first-child {
-  color: #cbd5e1;
-}
-
-.diagnostic-row span:last-child {
-  text-align: right;
-  overflow-wrap: anywhere;
+  .performance-summary {
+    gap: 6px;
+    font-size: 12px;
+  }
 }

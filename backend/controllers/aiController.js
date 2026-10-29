@@ -378,7 +378,7 @@ const generateAnswer = async (req, res) => {
       })}\n\n`
     );
 
-    res.write(data: ${JSON.stringify({ type: "done" })}\n\n);
+    res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
     res.end();
 
     console.log("Resume-grounded AI performance metrics:", metrics);

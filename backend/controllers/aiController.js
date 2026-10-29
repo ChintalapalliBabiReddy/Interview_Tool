@@ -1,8 +1,17 @@
+
 const projectClient = require("../config/openaiClient");
 const sessionStore = require("../services/interviewSessionStore");
 const { performance } = require("node:perf_hooks");
 
-const AGENT_NAME = "my-first-agent";
+const AGENT_NAME =
+  process.env.AZURE_AI_AGENT_NAME || "my-first-agent";
+
+const MODEL_NAME =
+  process.env.AZURE_AI_MODEL_NAME || "gpt-4.1-mini";
+
+const FIRST_REQUEST_USE_AGENT =
+  (process.env.AI_FIRST_REQUEST_USE_AGENT || "true").toLowerCase() ===
+  "true";
 
 const getOpenAIClient = () =>
   projectClient.getOpenAIClient({
@@ -207,7 +216,7 @@ const generateAnswer = async (req, res) => {
   let streamCompletedAt = null;
 
   try {
-    const { question, interviewSessionId } = req.body;
+    const { question, interviewSessionId } = req.body || {};
 
     if (typeof question !== "string" || !question.trim()) {
       return res.status(400).json({
@@ -246,11 +255,31 @@ const generateAnswer = async (req, res) => {
       });
     }
 
-    const openAIClient = getOpenAIClient();
+    const currentQuestion = question.trim();
 
     const interviewPrompt = buildInterviewPrompt({
-      question: question.trim(),
+      question: currentQuestion,
       session,
+    });
+
+    const openAIClient = getOpenAIClient();
+
+    // Use the agent until its first successful response is saved.
+    const useAgent =
+      FIRST_REQUEST_USE_AGENT &&
+      session.agentRequestCompleted !== true;
+
+    const routeDiagnostics = {
+      aiRoute: useAgent ? "agent" : "direct_model",
+      aiTarget: useAgent ? AGENT_NAME : MODEL_NAME,
+      agentUsed: useAgent,
+      resumeContextUsed: true,
+      sessionReused: true,
+    };
+
+    console.log("[AI Request]", {
+      interviewSessionId,
+      ...routeDiagnostics,
     });
 
     res.status(200);
@@ -260,22 +289,45 @@ const generateAnswer = async (req, res) => {
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders?.();
 
-    // Reuse the existing conversation and provide resume-grounded context.
-    const stream = await openAIClient.responses.create(
-      {
-        conversation: session.conversationId,
-        input: interviewPrompt,
-        stream: true,
-      },
-      {
-        body: {
-          agent_reference: {
-            name: AGENT_NAME,
-            type: "agent_reference",
-          },
+    let stream;
+
+    if (useAgent) {
+      // First request: call the Foundry agent.
+      stream = await openAIClient.responses.create(
+        {
+          conversation: session.conversationId,
+          input: interviewPrompt,
+          stream: true,
         },
-      }
-    );
+        {
+          body: {
+            agent_reference: {
+              name: AGENT_NAME,
+              type: "agent_reference",
+            },
+          },
+        }
+      );
+    } else {
+      // Subsequent requests: call the model directly.
+      // Supply the previous exchanges explicitly.
+      const history = (session.aiHistory || []).map((item) => ({
+        role: item.role,
+        content: item.content,
+      }));
+
+      stream = await openAIClient.responses.create({
+        model: MODEL_NAME,
+        input: [
+          ...history,
+          {
+            role: "user",
+            content: interviewPrompt,
+          },
+        ],
+        stream: true,
+      });
+    }
 
     aiRequestDurationMs = performance.now() - requestReceivedAt;
 
@@ -285,17 +337,17 @@ const generateAnswer = async (req, res) => {
         metrics: {
           conversationCreationMs: null,
           aiRequestSetupMs: Math.round(aiRequestDurationMs),
-          sessionReused: true,
-          resumeContextUsed: true,
+          ...routeDiagnostics,
         },
       })}\n\n`
     );
 
     let completed = false;
+    let answerText = "";
 
     for await (const event of stream) {
       if (res.destroyed || res.writableEnded) {
-        break;
+        return;
       }
 
       if (
@@ -312,10 +364,13 @@ const generateAnswer = async (req, res) => {
                 backendFirstTextMs: Math.round(
                   firstTextAt - requestReceivedAt
                 ),
+                ...routeDiagnostics,
               },
             })}\n\n`
           );
         }
+
+        answerText += event.delta;
 
         res.write(
           `data: ${JSON.stringify({
@@ -347,6 +402,22 @@ const generateAnswer = async (req, res) => {
 
     streamCompletedAt ??= performance.now();
 
+    // Save the exchange and mark agent completion only after success.
+    const exchangeSaved = await sessionStore.appendExchange(
+      interviewSessionId,
+      currentQuestion,
+      answerText,
+      {
+        markAgentRequestCompleted: useAgent,
+      }
+    );
+
+    if (!exchangeSaved) {
+      throw new Error(
+        "Interview session expired before the exchange could be saved"
+      );
+    }
+
     const totalBackendDurationMs =
       streamCompletedAt - requestReceivedAt;
 
@@ -367,8 +438,7 @@ const generateAnswer = async (req, res) => {
           ? null
           : Math.round(aiStreamingDurationMs),
       totalBackendDurationMs: Math.round(totalBackendDurationMs),
-      sessionReused: true,
-      resumeContextUsed: true,
+      ...routeDiagnostics,
     };
 
     res.write(
@@ -378,10 +448,20 @@ const generateAnswer = async (req, res) => {
       })}\n\n`
     );
 
-    res.write(`data: ${JSON.stringify({ type: "done" })}\n\n`);
+    res.write(
+      `data: ${JSON.stringify({
+        type: "done",
+        diagnostics: routeDiagnostics,
+      })}\n\n`
+    );
+
     res.end();
 
-    console.log("Resume-grounded AI performance metrics:", metrics);
+    console.log("[AI Request Completed]", {
+      interviewSessionId,
+      ...metrics,
+      answerCharacters: answerText.length,
+    });
   } catch (error) {
     console.error("AI answer generation failed:", {
       status: error.status,

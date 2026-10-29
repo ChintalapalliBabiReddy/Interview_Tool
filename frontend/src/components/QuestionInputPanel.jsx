@@ -1,4 +1,10 @@
-import { useState, useImperativeHandle, forwardRef, useCallback } from "react";
+
+import {
+  useState,
+  useImperativeHandle,
+  forwardRef,
+  useCallback,
+} from "react";
 import "../styles/QuestionInputPanel.css";
 import { FaSearch } from "react-icons/fa";
 import { AUTH_API } from "../constants/apiConstants";
@@ -14,11 +20,12 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
   const handleGenerateAnswer = useCallback(
     async (questionText) => {
       const isAudioQuestion = typeof questionText === "string";
-      const questionToSend = (isAudioQuestion ? questionText : question).trim();
+      const questionToSend = (
+        isAudioQuestion ? questionText : question
+      ).trim();
 
       if (!questionToSend || isLoading) return;
 
-      // A session must be initialized before questions can be submitted.
       if (!interviewSessionId) {
         window.alert(
           "Please add your profile details and start the interview before asking questions.",
@@ -32,9 +39,13 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
       let accumulatedAnswer = "";
       const uiRequestStart = performance.now();
+      const uiRequestStartAt = new Date().toISOString();
+
       let uiFirstTextAt = null;
       let uiCompletedAt = null;
       let backendMetrics = {};
+      let aiDiagnostics = {};
+      let completed = false;
 
       try {
         const response = await fetch(AUTH_API.AI_API_GENERATE_ANSWER, {
@@ -63,7 +74,6 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
-        let completed = false;
 
         const processEvent = (eventText) => {
           const dataLines = eventText
@@ -75,33 +85,72 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
           const payload = JSON.parse(dataLines.join("\n"));
 
-          if (payload.type === "timing" || payload.type === "metrics") {
+          if (
+            payload.type === "timing" ||
+            payload.type === "metrics"
+          ) {
             backendMetrics = {
               ...backendMetrics,
               ...(payload.metrics || {}),
             };
+
+            // The backend includes route information in these metrics.
+            const {
+              aiRoute,
+              aiTarget,
+              agentUsed,
+              resumeContextUsed,
+              sessionReused,
+            } = payload.metrics || {};
+
+            aiDiagnostics = {
+              ...aiDiagnostics,
+              ...(aiRoute !== undefined ? { aiRoute } : {}),
+              ...(aiTarget !== undefined ? { aiTarget } : {}),
+              ...(agentUsed !== undefined ? { agentUsed } : {}),
+              ...(resumeContextUsed !== undefined
+                ? { resumeContextUsed }
+                : {}),
+              ...(sessionReused !== undefined ? { sessionReused } : {}),
+            };
           } else if (payload.type === "delta" && payload.text) {
             accumulatedAnswer += payload.text;
 
-            if (uiFirstTextAt === null && payload.text.trim().length > 0) {
+            if (
+              uiFirstTextAt === null &&
+              payload.text.trim().length > 0
+            ) {
               uiFirstTextAt = performance.now();
             }
 
-            // Update the existing answer while the AI streams.
+            // Keep updating the current answer while streaming.
             onAnswerGenerated({
               question: questionToSend,
               answer: accumulatedAnswer,
               streaming: true,
+              diagnostics: aiDiagnostics,
+              metrics: backendMetrics,
             });
           } else if (payload.type === "done") {
             completed = true;
+
+            // Capture the final route diagnostics.
+            if (payload.diagnostics) {
+              aiDiagnostics = {
+                ...aiDiagnostics,
+                ...payload.diagnostics,
+              };
+            }
           } else if (payload.type === "error") {
-            throw new Error(payload.message || "Failed to generate answer");
+            throw new Error(
+              payload.message || "Failed to generate answer",
+            );
           }
         };
 
         while (true) {
           const { value, done } = await reader.read();
+
           if (done) break;
 
           buffer += decoder.decode(value, { stream: true });
@@ -131,8 +180,10 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
         uiCompletedAt = performance.now();
 
         const metrics = {
-          uiRequestStartAt: new Date().toISOString(),
-          uiResponseHeadersMs: Math.round(uiResponseHeadersAt - uiRequestStart),
+          uiRequestStartAt,
+          uiResponseHeadersMs: Math.round(
+            uiResponseHeadersAt - uiRequestStart,
+          ),
           uiFirstTextMs:
             uiFirstTextAt === null
               ? null
@@ -141,17 +192,23 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
             uiFirstTextAt === null
               ? null
               : Math.round(uiCompletedAt - uiFirstTextAt),
-          uiTotalDurationMs: Math.round(uiCompletedAt - uiRequestStart),
+          uiTotalDurationMs: Math.round(
+            uiCompletedAt - uiRequestStart,
+          ),
           ...backendMetrics,
         };
 
-        console.table(metrics);
+        console.table({
+          ...metrics,
+          ...aiDiagnostics,
+        });
 
         onAnswerGenerated({
           question: questionToSend,
           answer: accumulatedAnswer,
           streaming: false,
           metrics,
+          diagnostics: aiDiagnostics,
         });
 
         if (!isAudioQuestion) {
@@ -160,6 +217,18 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
       } catch (error) {
         console.error("AI answer streaming failed:", error);
         setError(error.message || "Unable to generate answer");
+
+        // Preserve any partial answer and diagnostic information.
+        if (accumulatedAnswer.trim()) {
+          onAnswerGenerated({
+            question: questionToSend,
+            answer: accumulatedAnswer,
+            streaming: false,
+            metrics: backendMetrics,
+            diagnostics: aiDiagnostics,
+            failed: true,
+          });
+        }
       } finally {
         setIsLoading(false);
         onLoadingChange?.(false);

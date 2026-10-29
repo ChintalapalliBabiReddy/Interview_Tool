@@ -29,6 +29,11 @@ async function createSession({
       ...(resumeText ? { resumeText } : {}),
     },
     aiHistory: [],
+
+    // First question uses the agent.
+    // Switch to direct model after successful agent completion.
+    agentRequestCompleted: false,
+
     status: "active",
     createdAt: new Date().toISOString(),
   };
@@ -61,7 +66,13 @@ async function getSession(interviewSessionId) {
   return JSON.parse(value);
 }
 
-async function appendExchange(interviewSessionId, question, answer) {
+async function appendExchange(
+  interviewSessionId,
+  question,
+  answer,
+  { markAgentRequestCompleted = false } = {}
+) {
+  const key = sessionKey(interviewSessionId);
   const session = await getSession(interviewSessionId);
 
   if (!session || session.status !== "active") {
@@ -75,18 +86,21 @@ async function appendExchange(interviewSessionId, question, answer) {
     { role: "assistant", content: answer }
   );
 
-  // Preserve the remaining session TTL instead of resetting
-  // the full duration whenever history is updated.
-  const remainingTtl = await redisClient.ttl(
-    sessionKey(interviewSessionId)
-  );
+  // Mark the agent as completed only after its response
+  // has been successfully generated and saved.
+  if (markAgentRequestCompleted) {
+    session.agentRequestCompleted = true;
+  }
+
+  // Preserve the remaining session TTL.
+  const remainingTtl = await redisClient.ttl(key);
 
   if (remainingTtl <= 0) {
     return false;
   }
 
   await redisClient.set(
-    sessionKey(interviewSessionId),
+    key,
     JSON.stringify(session),
     { EX: remainingTtl }
   );

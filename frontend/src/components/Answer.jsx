@@ -3,11 +3,22 @@ import "../styles/Answer.css";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
 const formatDuration = (value) =>
-  value == null ? "Not available" : `${value} ms`;
+  value == null ? "Not available" : `${(value / 1000).toFixed(2)} s`;
 
 function Answer({ history, currentIndex, onPrevious, onNext }) {
   const currentItem = history[currentIndex];
   const metrics = currentItem?.metrics;
+  const diagnostics = currentItem?.diagnostics || {};
+
+  const aiRoute = diagnostics.aiRoute ?? metrics?.aiRoute;
+  const aiTarget = diagnostics.aiTarget ?? metrics?.aiTarget;
+
+  const aiCallType =
+    aiRoute === "agent"
+      ? `Agent — ${aiTarget || "my-first-agent"}`
+      : aiRoute === "direct_model"
+        ? `Direct model — ${aiTarget || "gpt-4.1-mini"}`
+        : "Not available";
 
   return (
     <div className="answer-panel">
@@ -45,45 +56,23 @@ function Answer({ history, currentIndex, onPrevious, onNext }) {
           <h4>AI Answer</h4>
           <div className="answer-text">{currentItem.answer}</div>
 
-          {!currentItem.streaming && metrics && (
+          {!currentItem.streaming && (
             <section className="performance-diagnostics">
               <h4>Performance Diagnostics</h4>
 
               <div className="diagnostic-row">
-                <span>UI request started</span>
-                <span>{metrics.uiRequestStartAt}</span>
+                <span>AI call type</span>
+                <span>{aiCallType}</span>
               </div>
+
               <div className="diagnostic-row">
-                <span>UI received response headers</span>
-                <span>{formatDuration(metrics.uiResponseHeadersMs)}</span>
+                <span>First response time</span>
+                <span>{formatDuration(metrics?.uiFirstTextMs)}</span>
               </div>
+
               <div className="diagnostic-row">
-                <span>Conversation creation</span>
-                <span>{formatDuration(metrics.conversationCreationMs)}</span>
-              </div>
-              <div className="diagnostic-row">
-                <span>AI request setup</span>
-                <span>{formatDuration(metrics.aiRequestSetupMs)}</span>
-              </div>
-              <div className="diagnostic-row">
-                <span>Backend first text</span>
-                <span>{formatDuration(metrics.backendFirstTextMs)}</span>
-              </div>
-              <div className="diagnostic-row">
-                <span>UI first text received</span>
-                <span>{formatDuration(metrics.uiFirstTextMs)}</span>
-              </div>
-              <div className="diagnostic-row">
-                <span>First text to full answer</span>
-                <span>{formatDuration(metrics.uiAnswerStreamingMs)}</span>
-              </div>
-              <div className="diagnostic-row">
-                <span>Backend total duration</span>
-                <span>{formatDuration(metrics.totalBackendDurationMs)}</span>
-              </div>
-              <div className="diagnostic-row">
-                <span>Total UI duration</span>
-                <span>{formatDuration(metrics.uiTotalDurationMs)}</span>
+                <span>Total completion time</span>
+                <span>{formatDuration(metrics?.uiTotalDurationMs)}</span>
               </div>
             </section>
           )}

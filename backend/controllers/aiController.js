@@ -155,18 +155,18 @@ Start naturally with:
 "Sure, my name is [candidate name]..."
 
 Use only the candidate's documented professional
-background, experience, employer, skills, and clients.
-
+background, experience, employer, skills, and 2 supported contributions.
+ .
 Roles & Responsibilities:
 Provide 6–8 bullet points grounded in the resume.
 
 Latest Project 1:
 Provide the actual project title, overview, role,
-technologies, and 4–6 supported contributions.
+technologies, and 4 supported contributions.
 
 Latest Project 2:
 Provide the previous project title, overview, role,
-technologies, and 4–6 supported contributions.
+technologies, and 4 supported contributions.
 
 Include project sections only when supported by
 the resume. Never invent missing details.

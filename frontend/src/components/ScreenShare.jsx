@@ -8,6 +8,11 @@ function ScreenShare({ onStreamChange }) {
   const [isAudioActive, setIsAudioActive] = useState(false);
 
   const streamRef = useRef(null);
+  const onStreamChangeRef = useRef(onStreamChange);
+
+  useEffect(() => {
+    onStreamChangeRef.current = onStreamChange;
+  }, [onStreamChange]);
 
   const stopSharing = () => {
     const stream = streamRef.current;
@@ -15,17 +20,25 @@ function ScreenShare({ onStreamChange }) {
     if (stream) {
       stream.getTracks().forEach((track) => {
         track.onended = null;
+        track.onmute = null;
+        track.onunmute = null;
         track.stop();
       });
+
       streamRef.current = null;
     }
 
-    onStreamChange?.(null);
+    onStreamChangeRef.current?.(null);
+
     setIsSharing(false);
     setIsAudioActive(false);
+
+    console.log("[Screen Share] Sharing stopped.");
   };
 
   const startScreenShare = async () => {
+    if (streamRef.current) return;
+
     try {
       const stream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
@@ -37,33 +50,51 @@ function ScreenShare({ onStreamChange }) {
       const videoTrack = stream.getVideoTracks()[0];
       const audioTrack = stream.getAudioTracks()[0];
 
-      setIsSharing(Boolean(videoTrack?.readyState === "live"));
+      setIsSharing(videoTrack?.readyState === "live");
 
       if (audioTrack) {
         const updateAudioStatus = () => {
-          setIsAudioActive(
+          const active =
             audioTrack.readyState === "live" &&
-              audioTrack.enabled &&
-              !audioTrack.muted
-          );
+            audioTrack.enabled &&
+            !audioTrack.muted;
+
+          setIsAudioActive(active);
+
+          console.log("[Screen Share Audio]", {
+            readyState: audioTrack.readyState,
+            enabled: audioTrack.enabled,
+            muted: audioTrack.muted,
+          });
         };
 
-        updateAudioStatus();
-        onStreamChange?.(stream);
+        audioTrack.addEventListener("ended", updateAudioStatus);
+        audioTrack.addEventListener("mute", updateAudioStatus);
+        audioTrack.addEventListener("unmute", updateAudioStatus);
 
-        audioTrack.onended = updateAudioStatus;
-        audioTrack.onmute = updateAudioStatus;
-        audioTrack.onunmute = updateAudioStatus;
+        updateAudioStatus();
+
+        onStreamChangeRef.current?.(stream);
       } else {
         setIsAudioActive(false);
-        onStreamChange?.(null);
+        onStreamChangeRef.current?.(null);
+
+        console.warn(
+          "[Screen Share] No audio track. Select the browser tab and enable Share tab audio.",
+        );
       }
 
       if (videoTrack) {
         videoTrack.onended = stopSharing;
       }
+
+      console.log("[Screen Share] Stream started.", {
+        videoTracks: stream.getVideoTracks().length,
+        audioTracks: stream.getAudioTracks().length,
+      });
     } catch (error) {
       console.error("Screen sharing failed:", error);
+
       setIsSharing(false);
       setIsAudioActive(false);
     }
@@ -71,11 +102,18 @@ function ScreenShare({ onStreamChange }) {
 
   useEffect(() => {
     return () => {
-      streamRef.current?.getTracks().forEach((track) => {
-        track.onended = null;
-        track.stop();
-      });
-      streamRef.current = null;
+      const stream = streamRef.current;
+
+      if (stream) {
+        stream.getTracks().forEach((track) => {
+          track.onended = null;
+          track.onmute = null;
+          track.onunmute = null;
+          track.stop();
+        });
+
+        streamRef.current = null;
+      }
     };
   }, []);
 
@@ -91,10 +129,14 @@ function ScreenShare({ onStreamChange }) {
           isSharing
             ? isAudioActive
               ? "Screen sharing active — audio available"
-              : "Screen sharing active — no audio"
+              : "Screen sharing active — audio unavailable"
             : "Share screen"
         }
-        aria-label={isSharing ? "Stop screen sharing" : "Share screen"}
+        aria-label={
+          isSharing
+            ? "Stop screen sharing"
+            : "Share screen"
+        }
       >
         <FaDesktop /> Screen
       </button>

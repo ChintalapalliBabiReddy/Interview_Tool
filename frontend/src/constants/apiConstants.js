@@ -10,5 +10,6 @@ export const AUTH_API = {
   RESUME_UPLOAD_API: `${API_BASE_URL}/resume/upload`,
   AI_API_GENERATE_ANSWER: `${API_BASE_URL}/ai/answer`,
   SPEECH_TRANSCRIBE: `${API_BASE_URL}/speech/transcribe`,
+  SPEECH_TOKEN: `${API_BASE_URL}/speech/token`,
   INTERVIEW_SESSION_API: `${API_BASE_URL}/interview/session`,
 };

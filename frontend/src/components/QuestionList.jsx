@@ -13,15 +13,27 @@ function QuestionList({
     <div className="question-list-container">
       <div className="question-list">
         {questions.map((question, index) => (
-          <div key={question.id} className="detected-question">
-            <strong>Q{question.number ?? index + 1}:</strong>
+          <div
+            key={question.id}
+            className="detected-question"
+          >
+            <strong>
+              Q{question.number ?? index + 1}:
+            </strong>
+
             <span>{question.text}</span>
           </div>
         ))}
 
         {hasActiveQuestion && (
-          <div className="live-transcript" aria-live="polite">
-            <strong>Q{questions.length + 1}:</strong>
+          <div
+            className="live-transcript"
+            aria-live="polite"
+          >
+            <strong>
+              Q{questions.length + 1}:
+            </strong>
+
             <span>{transcript}</span>
 
             <span
@@ -37,7 +49,9 @@ function QuestionList({
         )}
 
         {!questions.length && !hasActiveQuestion && (
-          <p className="empty-questions">Waiting for speech...</p>
+          <p className="empty-questions">
+            Waiting for speech...
+          </p>
         )}
       </div>
 
@@ -45,9 +59,14 @@ function QuestionList({
         type="button"
         className="action-btn"
         onClick={onGenerateAnswer}
-        disabled={!hasActiveQuestion || isGeneratingAnswer}
+        disabled={
+          !hasActiveQuestion ||
+          isGeneratingAnswer
+        }
       >
-        {isGeneratingAnswer ? "Generating..." : "Create Answer"}
+        {isGeneratingAnswer
+          ? "Generating..."
+          : "Create Answer"}
       </button>
     </div>
   );

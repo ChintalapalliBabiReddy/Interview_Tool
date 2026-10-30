@@ -4,74 +4,111 @@ import {
   useImperativeHandle,
   forwardRef,
   useCallback,
+  useRef,
 } from "react";
+
 import "../styles/QuestionInputPanel.css";
 import { FaSearch } from "react-icons/fa";
 import { AUTH_API } from "../constants/apiConstants";
 
+const createRequestId = () =>
+  globalThis.crypto?.randomUUID?.() ||
+  `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 const QuestionInputPanel = forwardRef(function QuestionInputPanel(
-  { onAnswerGenerated, onLoadingChange, interviewSessionId },
+  {
+    onAnswerGenerated,
+    onLoadingChange,
+    interviewSessionId,
+  },
   ref,
 ) {
   const [question, setQuestion] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const loadingRef = useRef(false);
+
   const handleGenerateAnswer = useCallback(
-    async (questionText) => {
+    async (questionText, suppliedRequestId) => {
       const isAudioQuestion = typeof questionText === "string";
+
       const questionToSend = (
         isAudioQuestion ? questionText : question
       ).trim();
 
-      if (!questionToSend || isLoading) return;
+      if (!questionToSend || loadingRef.current) {
+        return false;
+      }
 
       if (!interviewSessionId) {
         window.alert(
           "Please add your profile details and start the interview before asking questions.",
         );
-        return;
+
+        return false;
       }
+
+      const requestId = suppliedRequestId || createRequestId();
+
+      loadingRef.current = true;
 
       setIsLoading(true);
       onLoadingChange?.(true);
       setError("");
 
       let accumulatedAnswer = "";
-      const uiRequestStart = performance.now();
-      const uiRequestStartAt = new Date().toISOString();
-
       let uiFirstTextAt = null;
-      let uiCompletedAt = null;
       let backendMetrics = {};
       let aiDiagnostics = {};
       let completed = false;
+      let reader = null;
+
+      const uiRequestStart = performance.now();
+      const uiRequestStartAt = new Date().toISOString();
+
+      // Create a unique answer entry before streaming starts.
+      onAnswerGenerated({
+        requestId,
+        question: questionToSend,
+        answer: "",
+        streaming: true,
+      });
 
       try {
-        const response = await fetch(AUTH_API.AI_API_GENERATE_ANSWER, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "text/event-stream",
+        const response = await fetch(
+          AUTH_API.AI_API_GENERATE_ANSWER,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Accept: "text/event-stream",
+            },
+            body: JSON.stringify({
+              question: questionToSend,
+              interviewSessionId,
+            }),
           },
-          body: JSON.stringify({
-            question: questionToSend,
-            interviewSessionId,
-          }),
-        });
+        );
 
         const uiResponseHeadersAt = performance.now();
 
         if (!response.ok) {
           const result = await response.json().catch(() => ({}));
-          throw new Error(result.message || "Failed to generate answer");
+
+          throw new Error(
+            result.message || "Failed to generate answer",
+          );
         }
 
         if (!response.body) {
-          throw new Error("Streaming is not supported by this response");
+          throw new Error(
+            "Streaming is not supported by this response",
+          );
         }
 
-        const reader = response.body.getReader();
+        reader = response.body.getReader();
+
         const decoder = new TextDecoder();
         let buffer = "";
 
@@ -94,7 +131,6 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
               ...(payload.metrics || {}),
             };
 
-            // The backend includes route information in these metrics.
             const {
               aiRoute,
               aiTarget,
@@ -111,9 +147,14 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
               ...(resumeContextUsed !== undefined
                 ? { resumeContextUsed }
                 : {}),
-              ...(sessionReused !== undefined ? { sessionReused } : {}),
+              ...(sessionReused !== undefined
+                ? { sessionReused }
+                : {}),
             };
-          } else if (payload.type === "delta" && payload.text) {
+          } else if (
+            payload.type === "delta" &&
+            payload.text
+          ) {
             accumulatedAnswer += payload.text;
 
             if (
@@ -123,8 +164,8 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
               uiFirstTextAt = performance.now();
             }
 
-            // Keep updating the current answer while streaming.
             onAnswerGenerated({
+              requestId,
               question: questionToSend,
               answer: accumulatedAnswer,
               streaming: true,
@@ -134,7 +175,6 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
           } else if (payload.type === "done") {
             completed = true;
 
-            // Capture the final route diagnostics.
             if (payload.diagnostics) {
               aiDiagnostics = {
                 ...aiDiagnostics,
@@ -153,9 +193,12 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
           if (done) break;
 
-          buffer += decoder.decode(value, { stream: true });
+          buffer += decoder.decode(value, {
+            stream: true,
+          });
 
           const events = buffer.split(/\r?\n\r?\n/);
+
           buffer = events.pop() || "";
 
           for (const eventText of events) {
@@ -170,31 +213,42 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
         }
 
         if (!completed) {
-          throw new Error("The answer stream ended unexpectedly");
+          throw new Error(
+            "The answer stream ended unexpectedly",
+          );
         }
 
         if (!accumulatedAnswer.trim()) {
           throw new Error("The AI returned an empty answer");
         }
 
-        uiCompletedAt = performance.now();
+        const uiCompletedAt = performance.now();
 
         const metrics = {
           uiRequestStartAt,
+
           uiResponseHeadersMs: Math.round(
             uiResponseHeadersAt - uiRequestStart,
           ),
+
           uiFirstTextMs:
             uiFirstTextAt === null
               ? null
-              : Math.round(uiFirstTextAt - uiRequestStart),
+              : Math.round(
+                  uiFirstTextAt - uiRequestStart,
+                ),
+
           uiAnswerStreamingMs:
             uiFirstTextAt === null
               ? null
-              : Math.round(uiCompletedAt - uiFirstTextAt),
+              : Math.round(
+                  uiCompletedAt - uiFirstTextAt,
+                ),
+
           uiTotalDurationMs: Math.round(
             uiCompletedAt - uiRequestStart,
           ),
+
           ...backendMetrics,
         };
 
@@ -204,6 +258,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
         });
 
         onAnswerGenerated({
+          requestId,
           question: questionToSend,
           answer: accumulatedAnswer,
           streaming: false,
@@ -214,29 +269,44 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
         if (!isAudioQuestion) {
           setQuestion("");
         }
-      } catch (error) {
-        console.error("AI answer streaming failed:", error);
-        setError(error.message || "Unable to generate answer");
 
-        // Preserve any partial answer and diagnostic information.
-        if (accumulatedAnswer.trim()) {
-          onAnswerGenerated({
-            question: questionToSend,
-            answer: accumulatedAnswer,
-            streaming: false,
-            metrics: backendMetrics,
-            diagnostics: aiDiagnostics,
-            failed: true,
-          });
-        }
+        return true;
+      } catch (err) {
+        console.error(
+          "AI answer streaming failed:",
+          err,
+        );
+
+        setError(
+          err.message || "Unable to generate answer",
+        );
+
+        onAnswerGenerated({
+          requestId,
+          question: questionToSend,
+          answer: accumulatedAnswer,
+          streaming: false,
+          metrics: backendMetrics,
+          diagnostics: aiDiagnostics,
+          failed: true,
+        });
+
+        return false;
       } finally {
+        try {
+          await reader?.cancel();
+        } catch {
+          // Stream may already be closed.
+        }
+
+        loadingRef.current = false;
+
         setIsLoading(false);
         onLoadingChange?.(false);
       }
     },
     [
       question,
-      isLoading,
       interviewSessionId,
       onAnswerGenerated,
       onLoadingChange,
@@ -247,6 +317,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
     ref,
     () => ({
       generateAnswer: handleGenerateAnswer,
+      isBusy: () => loadingRef.current,
     }),
     [handleGenerateAnswer],
   );
@@ -263,7 +334,10 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
       <div className="input-footer">
         {error && (
-          <span className="error-message" role="alert">
+          <span
+            className="error-message"
+            role="alert"
+          >
             {error}
           </span>
         )}

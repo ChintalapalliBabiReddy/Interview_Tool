@@ -3,18 +3,31 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const cookieParser = require("cookie-parser");
 
 const authRoutes = require("./routes/authRoutes");
 const resumeRoutes = require("./routes/resumeRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const speechRoutes = require("./routes/speechRoutes");
-const { connectRedis } = require("./config/redisClient");
 const interviewRoutes = require("./routes/interviewRoutes");
+
+const { connectRedis } = require("./config/redisClient");
 
 const app = express();
 
-app.use(cors());
+const allowedOrigins = [
+  process.env.FRONTEND_URL || "http://localhost:5173",
+];
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  })
+);
+
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api/auth", authRoutes);
 app.use("/api/resume", resumeRoutes);
@@ -26,7 +39,6 @@ const PORT = process.env.PORT || 8080;
 
 async function startServer() {
   try {
-    // Connect Redis before accepting requests.
     await connectRedis();
 
     app.listen(PORT, () => {

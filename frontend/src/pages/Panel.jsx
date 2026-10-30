@@ -20,6 +20,7 @@ import {
 
 import { useNavigate } from "react-router-dom";
 import { AUTH_API } from "../constants/apiConstants";
+import { useAuth } from "../context/AuthContext";
 
 function createRequestId() {
   return (
@@ -30,6 +31,7 @@ function createRequestId() {
 
 function Panel() {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const questionInputRef = useRef(null);
   const speechToTextRef = useRef(null);
@@ -69,7 +71,7 @@ function Panel() {
 
     const timer = window.setInterval(() => {
       setTimeLeft((previousValue) =>
-        Math.max(0, previousValue - 1),
+        Math.max(0, previousValue - 1)
       );
     }, 1000);
 
@@ -87,7 +89,7 @@ function Panel() {
 
     if (!resumeId) {
       window.alert(
-        "Please upload and process your resume before starting.",
+        "Please upload and process your resume before starting."
       );
       return;
     }
@@ -100,6 +102,7 @@ function Panel() {
         AUTH_API.INTERVIEW_SESSION_API,
         {
           method: "POST",
+          credentials: "include",
           headers: {
             "Content-Type": "application/json",
           },
@@ -109,11 +112,11 @@ function Panel() {
             company: interviewDetails.company.trim(),
             round: interviewDetails.round,
             durationMinutes: Number(
-              interviewDetails.duration,
+              interviewDetails.duration
             ),
             resumeId,
           }),
-        },
+        }
       );
 
       const result = await response.json();
@@ -125,7 +128,7 @@ function Panel() {
       ) {
         throw new Error(
           result.message ||
-            "Failed to initialize interview session",
+            "Failed to initialize interview session"
         );
       }
 
@@ -133,23 +136,23 @@ function Panel() {
       setCandidateDetails(interviewDetails);
 
       setTimeLeft(
-        Number(interviewDetails.duration) * 60,
+        Number(interviewDetails.duration) * 60
       );
 
       setInterviewStarted(true);
       setShowModal(false);
 
       console.log(
-        "Interview session initialized with resume context.",
+        "Interview session initialized with resume context."
       );
     } catch (error) {
       console.error(
         "Interview initialization failed:",
-        error,
+        error
       );
 
       setStartError(
-        error.message || "Failed to start interview",
+        error.message || "Failed to start interview"
       );
     } finally {
       setIsStartingInterview(false);
@@ -168,7 +171,7 @@ function Panel() {
 
     if (!interviewSessionId) {
       window.alert(
-        "Please start the interview before creating an answer.",
+        "Please start the interview before creating an answer."
       );
       return;
     }
@@ -203,7 +206,7 @@ function Panel() {
     const generationPromise =
       questionInputRef.current?.generateAnswer(
         questionText,
-        requestId,
+        requestId
       );
 
     if (!generationPromise) {
@@ -223,11 +226,11 @@ function Panel() {
       (error) => {
         console.error(
           "Question generation promise failed:",
-          error,
+          error
         );
 
         submittingQuestionRef.current = false;
-      },
+      }
     );
   }, [
     transcript,
@@ -235,11 +238,19 @@ function Panel() {
     isGeneratingAnswer,
   ]);
 
-  // Logout.
-  const handleLogout = () => {
+  // Logout using the shared authentication context.
+  const handleLogout = async () => {
     if (window.confirm("Are you sure to logout?")) {
-      setAudioStream(null);
-      navigate("/");
+      try {
+        setAudioStream(null);
+
+        await logout();
+
+        navigate("/", { replace: true });
+      } catch (error) {
+        console.error("Logout failed:", error);
+        window.alert("Unable to logout. Please try again.");
+      }
     }
   };
 
@@ -248,22 +259,22 @@ function Panel() {
     const hours = Math.floor(totalSeconds / 3600);
 
     const minutes = Math.floor(
-      (totalSeconds % 3600) / 60,
+      (totalSeconds % 3600) / 60
     );
 
     const seconds = totalSeconds % 60;
 
     if (hours > 0) {
       return `${String(hours).padStart(2, "0")}:${String(
-        minutes,
+        minutes
       ).padStart(2, "0")}:${String(seconds).padStart(
         2,
-        "0",
+        "0"
       )}`;
     }
 
     return `${String(minutes).padStart(2, "0")}:${String(
-      seconds,
+      seconds
     ).padStart(2, "0")}`;
   };
 
@@ -280,7 +291,7 @@ function Panel() {
 
     if (!["pdf", "docx"].includes(extension)) {
       window.alert(
-        "Please upload a PDF or DOCX resume.",
+        "Please upload a PDF or DOCX resume."
       );
 
       event.target.value = "";
@@ -299,21 +310,22 @@ function Panel() {
         AUTH_API.RESUME_UPLOAD_API,
         {
           method: "POST",
+          credentials: "include",
           body: formData,
-        },
+        }
       );
 
       const result = await response.json();
 
       if (!response.ok || !result.success) {
         throw new Error(
-          result.message || "Resume upload failed",
+          result.message || "Resume upload failed"
         );
       }
 
       if (!result.resumeId) {
         throw new Error(
-          "The server did not return a resume ID. Please try uploading again.",
+          "The server did not return a resume ID. Please try uploading again."
         );
       }
 
@@ -325,11 +337,11 @@ function Panel() {
         {
           fileName: result.fileName,
           resumeId: result.resumeId,
-        },
+        }
       );
 
       window.alert(
-        "Resume uploaded and processed successfully!",
+        "Resume uploaded and processed successfully!"
       );
     } catch (error) {
       console.error("Resume upload failed:", error);
@@ -338,7 +350,7 @@ function Panel() {
       setResumeId(null);
 
       window.alert(
-        error.message || "Failed to upload resume",
+        error.message || "Failed to upload resume"
       );
     } finally {
       setIsUploading(false);
@@ -352,7 +364,7 @@ function Panel() {
     if (!item.requestId) {
       console.error(
         "Answer received without requestId:",
-        item,
+        item
       );
       return;
     }
@@ -360,7 +372,7 @@ function Panel() {
     const previousHistory = answerHistoryRef.current;
 
     const existingIndex = previousHistory.findIndex(
-      (entry) => entry.requestId === item.requestId,
+      (entry) => entry.requestId === item.requestId
     );
 
     let updatedHistory;
@@ -386,7 +398,7 @@ function Panel() {
     // Navigate to the new answer only when it is first created.
     if (existingIndex === -1) {
       setCurrentAnswerIndex(
-        updatedHistory.length - 1,
+        updatedHistory.length - 1
       );
     }
   }, []);
@@ -394,7 +406,7 @@ function Panel() {
   // Navigate to previous answer.
   const handlePreviousAnswer = () => {
     setCurrentAnswerIndex((index) =>
-      Math.max(0, index - 1),
+      Math.max(0, index - 1)
     );
   };
 
@@ -403,8 +415,8 @@ function Panel() {
     setCurrentAnswerIndex((index) =>
       Math.min(
         answerHistory.length - 1,
-        index + 1,
-      ),
+        index + 1
+      )
     );
   };
 

@@ -343,9 +343,7 @@ Include when available:
 - Total professional experience
 - Current company and designation
 - Primary technical skills
-- Current client or project
 - Brief professional background
-- Two supported professional contributions
 
 Roles & Responsibilities:
 
@@ -366,7 +364,6 @@ Latest Project 1:
 Provide:
 - Actual project title
 - Project overview
-- Candidate's role
 - Technologies used
 - Four supported contributions
 
@@ -375,7 +372,6 @@ Latest Project 2:
 Provide:
 - Actual project title
 - Project overview
-- Candidate's role
 - Technologies used
 - Four supported contributions
 
@@ -384,7 +380,7 @@ SELF-INTRODUCTION RULES:
 1. Use only the candidate's documented experience.
 2. Never invent names, employers, projects, or achievements.
 3. Include project sections only when supported by the resume.
-4. If only one project is available, include only Latest Project 1.
+4. If only 2 project is available, include only Latest Project 2.
 5. If no projects are available, omit project sections.
 6. Use natural first-person language.
 7. Target 300–450 words when sufficient information exists.

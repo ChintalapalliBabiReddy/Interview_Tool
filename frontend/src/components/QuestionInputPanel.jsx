@@ -29,6 +29,14 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
 
   const loadingRef = useRef(false);
 
+  // Clear the manually entered question.
+  const clearQuestion = useCallback(() => {
+    if (loadingRef.current) return;
+
+    setQuestion("");
+    setError("");
+  }, []);
+
   const handleGenerateAnswer = useCallback(
     async (questionText, suppliedRequestId) => {
       const isAudioQuestion = typeof questionText === "string";
@@ -67,7 +75,6 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
       const uiRequestStart = performance.now();
       const uiRequestStartAt = new Date().toISOString();
 
-      // Create a unique answer entry before streaming starts.
       onAnswerGenerated({
         requestId,
         question: questionToSend,
@@ -80,6 +87,7 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
           AUTH_API.AI_API_GENERATE_ANSWER,
           {
             method: "POST",
+            credentials: "include",
             headers: {
               "Content-Type": "application/json",
               Accept: "text/event-stream",
@@ -318,8 +326,9 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
     () => ({
       generateAnswer: handleGenerateAnswer,
       isBusy: () => loadingRef.current,
+      clearQuestion,
     }),
-    [handleGenerateAnswer],
+    [handleGenerateAnswer, clearQuestion],
   );
 
   return (

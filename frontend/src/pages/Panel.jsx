@@ -238,6 +238,26 @@ function Panel() {
     isGeneratingAnswer,
   ]);
 
+  // Clear current transcript and manually entered question.
+  const handleClearQuestion = () => {
+    if (
+      isGeneratingAnswer ||
+      questionInputRef.current?.isBusy() ||
+      submittingQuestionRef.current
+    ) {
+      return;
+    }
+
+    // Clear the Speech-to-Text transcript.
+    speechToTextRef.current?.clearCurrentTranscript();
+
+    // Clear the displayed transcript.
+    setTranscript("");
+
+    // Clear the manually typed question.
+    questionInputRef.current?.clearQuestion();
+  };
+
   // Logout using the shared authentication context.
   const handleLogout = async () => {
     if (window.confirm("Are you sure to logout?")) {
@@ -547,14 +567,13 @@ function Panel() {
             <div className="action-section">
               <button
                 className="action-btn"
-                onClick={handleNextAnswer}
+                onClick={handleClearQuestion}
                 disabled={
-                  answerHistory.length === 0 ||
-                  currentAnswerIndex >=
-                    answerHistory.length - 1
+                  isGeneratingAnswer ||
+                  questionInputRef.current?.isBusy()
                 }
               >
-                Next
+                Clear
               </button>
 
               <Download history={answerHistory} />

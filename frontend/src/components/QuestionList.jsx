@@ -9,9 +9,27 @@ function QuestionList({
 }) {
   const hasActiveQuestion = Boolean(transcript.trim());
 
+  const handleKeyDown = (event) => {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing &&
+      hasActiveQuestion &&
+      !isGeneratingAnswer
+    ) {
+      event.preventDefault();
+      onGenerateAnswer?.();
+    }
+  };
+
   return (
     <div className="question-list-container">
-      <div className="question-list">
+      <div
+        className="question-list"
+        tabIndex={0}
+        onKeyDown={handleKeyDown}
+        aria-label="Detected interview questions"
+      >
         {questions.map((question, index) => (
           <div
             key={question.id}

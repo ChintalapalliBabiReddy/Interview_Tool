@@ -149,7 +149,6 @@ function InterviewSetupModal({
                 onChange={(event) => setDuration(event.target.value)}
                 disabled={isSubmitting}
               >
-                <option value="15">15 Minutes</option>
                 <option value="30">30 Minutes</option>
                 <option value="45">45 Minutes</option>
                 <option value="60">60 Minutes</option>

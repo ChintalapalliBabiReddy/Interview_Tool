@@ -321,6 +321,19 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
     ],
   );
 
+  // Generate answer when Enter is pressed.
+  // Shift + Enter inserts a new line.
+  const handleQuestionKeyDown = (event) => {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.nativeEvent.isComposing
+    ) {
+      event.preventDefault();
+      handleGenerateAnswer();
+    }
+  };
+
   useImperativeHandle(
     ref,
     () => ({
@@ -337,7 +350,11 @@ const QuestionInputPanel = forwardRef(function QuestionInputPanel(
         className="question-input"
         placeholder="Type interview question here..."
         value={question}
-        onChange={(event) => setQuestion(event.target.value)}
+        onChange={(event) => {
+          setQuestion(event.target.value);
+          if (error) setError("");
+        }}
+        onKeyDown={handleQuestionKeyDown}
         disabled={isLoading}
       />
 

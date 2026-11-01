@@ -18,11 +18,7 @@ function InterviewSetupModal({
 
     if (isSubmitting) return;
 
-    if (
-      !name.trim() ||
-      !email.trim() ||
-      !company.trim()
-    ) {
+    if (!name.trim() || !email.trim() || !company.trim()) {
       alert("Please fill all required fields");
       return;
     }
@@ -53,11 +49,27 @@ function InterviewSetupModal({
         aria-modal="true"
         aria-labelledby="interview-setup-title"
       >
-        <h2 id="interview-setup-title">Interview Setup</h2>
+        <div className="modal-heading">
+          <div className="modal-icon">✦</div>
+
+          <div>
+            <h2 id="interview-setup-title">
+              Interview Setup
+            </h2>
+            <p>Configure your interview details to get started.</p>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit}>
+          <div className="form-section-title">
+            Candidate Information
+          </div>
+
           <div className="form-group">
-            <label htmlFor="candidate-name">Name *</label>
+            <label htmlFor="candidate-name">
+              Full Name <span>*</span>
+            </label>
+
             <input
               id="candidate-name"
               type="text"
@@ -71,7 +83,10 @@ function InterviewSetupModal({
           </div>
 
           <div className="form-group">
-            <label htmlFor="candidate-email">Email *</label>
+            <label htmlFor="candidate-email">
+              Email Address <span>*</span>
+            </label>
+
             <input
               id="candidate-email"
               type="email"
@@ -85,7 +100,10 @@ function InterviewSetupModal({
           </div>
 
           <div className="form-group">
-            <label htmlFor="candidate-company">Company *</label>
+            <label htmlFor="candidate-company">
+              Company <span>*</span>
+            </label>
+
             <input
               id="candidate-company"
               type="text"
@@ -97,34 +115,47 @@ function InterviewSetupModal({
             />
           </div>
 
-          <div className="form-group">
-            <label htmlFor="interview-round">Interview Round</label>
-            <select
-              id="interview-round"
-              value={round}
-              onChange={(event) => setRound(event.target.value)}
-              disabled={isSubmitting}
-            >
-              <option value="L1">L1</option>
-              <option value="L2">L2</option>
-              <option value="L3">L3</option>
-              <option value="HR">HR</option>
-            </select>
+          <div className="form-section-title interview-details-title">
+            Interview Details
           </div>
 
-          <div className="form-group">
-            <label htmlFor="interview-duration">Duration</label>
-            <select
-              id="interview-duration"
-              value={duration}
-              onChange={(event) => setDuration(event.target.value)}
-              disabled={isSubmitting}
-            >
-              <option value="30">30 Minutes</option>
-              <option value="45">45 Minutes</option>
-              <option value="60">60 Minutes</option>
-              <option value="90">90 Minutes</option>
-            </select>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="interview-round">
+                Interview Round
+              </label>
+
+              <select
+                id="interview-round"
+                value={round}
+                onChange={(event) => setRound(event.target.value)}
+                disabled={isSubmitting}
+              >
+                <option value="L1">L1</option>
+                <option value="L2">L2</option>
+                <option value="L3">L3</option>
+                <option value="HR">HR</option>
+              </select>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="interview-duration">
+                Duration
+              </label>
+
+              <select
+                id="interview-duration"
+                value={duration}
+                onChange={(event) => setDuration(event.target.value)}
+                disabled={isSubmitting}
+              >
+                <option value="15">15 Minutes</option>
+                <option value="30">30 Minutes</option>
+                <option value="45">45 Minutes</option>
+                <option value="60">60 Minutes</option>
+                <option value="90">90 Minutes</option>
+              </select>
+            </div>
           </div>
 
           <div className="modal-actions">

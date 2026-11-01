@@ -1,4 +1,5 @@
 
+/* Question list container */
 .question-list-container {
   display: flex;
   flex-direction: column;
@@ -9,16 +10,16 @@
   box-sizing: border-box;
 }
 
-/* Scrollable list of detected speech questions */
+/* Scrollable detected questions */
 .question-list {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
-  padding: 12px;
-  color: #ffffff;
+  padding: 5px 7px;
+  color: #e5e7eb;
   scrollbar-width: thin;
-  scrollbar-color: #8b93a1 #343840;
+  scrollbar-color: #64748b #293344;
   box-sizing: border-box;
 }
 
@@ -26,81 +27,138 @@
 .detected-question {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
-  padding: 12px;
-  margin-bottom: 10px;
-  background-color: #414650;
+  gap: 7px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: #293344;
   border: 1px solid transparent;
-  border-radius: 8px;
-  color: #ffffff;
+  border-radius: 6px;
+  color: #e5e7eb;
   overflow-wrap: anywhere;
-  line-height: 1.5;
-  cursor: pointer;
+  line-height: 1.45;
+  font-size: 13px;
   box-sizing: border-box;
 }
 
-.detected-question strong,
-.detected-question span {
-  color: #ffffff;
-}
-
+/* Question number */
 .detected-question strong {
   flex-shrink: 0;
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+/* Question text */
+.detected-question span {
+  color: #e5e7eb;
 }
 
 /* Selected question */
 .detected-question.selected-question {
-  border-color: #a2adea;
-  background-color: rgba(162, 173, 234, 0.12);
+  border-color: #64748b;
+  background: #354257;
 }
 
-/* Keyboard focus */
+/* Keyboard accessibility */
 .detected-question:focus-visible {
-  outline: 2px solid #a2adea;
+  outline: 2px solid #60a5fa;
   outline-offset: 2px;
 }
 
-/* Empty state */
-.empty-questions {
-  padding: 8px;
-  color: #ffffff;
+/* Current live transcript */
+.live-transcript {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  background: #293344;
+  border-left: 3px solid #22c55e;
+  border-radius: 6px;
+  color: #e5e7eb;
+  font-size: 13px;
+  line-height: 1.45;
   overflow-wrap: anywhere;
 }
 
-/* Question list scrollbar */
+.live-transcript strong {
+  flex-shrink: 0;
+  color: #4ade80;
+}
+
+.live-transcript > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Listening indicator */
+.listening-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.listening-indicator span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+/* Empty question state */
+.empty-questions {
+  margin: 0;
+  padding: 7px 9px;
+  color: #cbd5e1;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Scrollbar */
 .question-list::-webkit-scrollbar {
-  width: 7px;
+  width: 5px;
 }
 
 .question-list::-webkit-scrollbar-track {
-  background: #343840;
+  background: #293344;
 }
 
 .question-list::-webkit-scrollbar-thumb {
-  background: #8b93a1;
-  border-radius: 6px;
+  background: #64748b;
+  border-radius: 5px;
 }
 
-/* Compact Create Answer button */
+/* Create Answer button */
 .question-list-container > .action-btn {
   display: block;
-  flex: 0 0 38px;
-  align-self: stretch;
-  width: calc(100% - 16px);
-  height: 38px;
-  min-height: 38px;
-  max-height: 38px;
-  margin: 8px;
-  padding: 0 12px;
+  flex: 0 0 36px;
+  width: 100%;
+  height: 36px;
+  min-height: 36px;
+  max-height: 36px;
+  margin: 5px 0 0;
+  padding: 0 10px;
   box-sizing: border-box;
-  font-size: 13px;
-  line-height: 1;
-  border: none;
-  border-radius: 6px;
+
+  background: #334155;
+  color: #4ade80;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+
+  border: 1px solid #64748b;
+  border-radius: 8px;
   cursor: pointer;
 }
 
-/* Disabled while generating or when no question is selected */
+/* Hover */
+.question-list-container > .action-btn:hover:not(:disabled) {
+  background: #40516a;
+  border-color: #94a3b8;
+}
+
+/* Disabled */
 .question-list-container > .action-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
@@ -109,18 +167,18 @@
 /* Smaller screens */
 @media (max-width: 768px) {
   .question-list {
-    padding: 8px;
+    padding: 5px;
   }
 
-  .detected-question {
-    padding: 8px;
-    margin-bottom: 8px;
+  .detected-question,
+  .live-transcript {
+    padding: 7px 8px;
+    font-size: 12px;
   }
 
   .question-list-container > .action-btn {
-    width: calc(100% - 16px);
-    height: 38px;
-    min-height: 38px;
-    max-height: 38px;
+    flex-basis: 30px;
+    height: 30px;
+    min-height: 30px;
   }
 }

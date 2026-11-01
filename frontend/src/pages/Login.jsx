@@ -2,6 +2,7 @@
 import { useState } from "react";
 import "../styles/Login.css";
 import { MdEmail } from "react-icons/md";
+import { FaShieldAlt } from "react-icons/fa";
 import { useNavigate } from "react-router-dom";
 import { AUTH_API } from "../constants/apiConstants";
 import { useAuth } from "../context/AuthContext";
@@ -106,67 +107,113 @@ function Login() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>Login</h1>
+        <div className="login-brand-icon">
+          <FaShieldAlt />
+        </div>
 
-        <p>Enter your email address to receive an OTP</p>
+        <div className="login-heading">
+          <h1>Welcome Back</h1>
+          <p>
+            Sign in to access your AI Interview Assistant.
+          </p>
+        </div>
 
-        <input
-          type="email"
-          placeholder="Enter Email Address"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          disabled={loading || otpSent}
-        />
-
-        {!otpSent && (
-          <button
-            onClick={handleSendOtp}
-            disabled={!email.trim() || loading}
-          >
-            <MdEmail className="button-icon" />
-            <span>{loading ? "Sending OTP..." : "Send OTP"}</span>
-          </button>
-        )}
-
-        {otpSent && (
-          <>
-            <label htmlFor="otp-input">Enter the 6-digit OTP</label>
+        <form
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (otpSent) {
+              handleVerifyOtp();
+            } else {
+              handleSendOtp();
+            }
+          }}
+        >
+          <div className="login-form-group">
+            <label htmlFor="login-email">Email Address</label>
 
             <input
-              id="otp-input"
-              type="text"
-              placeholder="Enter OTP"
-              value={otp}
-              onChange={(e) => {
-                const value = e.target.value;
-
-                if (/^\d{0,6}$/.test(value)) {
-                  setOtp(value);
-                }
-              }}
-              maxLength={6}
-              inputMode="numeric"
+              id="login-email"
+              type="email"
+              placeholder="Enter your email address"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              disabled={loading || otpSent}
+              autoComplete="email"
+              required
             />
+          </div>
 
-            <button
-              onClick={handleVerifyOtp}
-              disabled={otp.length !== 6 || loading}
-            >
-              <span>{loading ? "Verifying..." : "Verify OTP"}</span>
-            </button>
-          </>
-        )}
+          {otpSent && (
+            <div className="login-form-group otp-group">
+              <label htmlFor="otp-input">Verification Code</label>
+
+              <input
+                id="otp-input"
+                type="text"
+                placeholder="Enter 6-digit OTP"
+                value={otp}
+                onChange={(event) => {
+                  const value = event.target.value;
+
+                  if (/^\d{0,6}$/.test(value)) {
+                    setOtp(value);
+                  }
+                }}
+                maxLength={6}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                disabled={loading}
+                required
+              />
+
+              <span className="otp-helper">
+                Enter the verification code sent to your email.
+              </span>
+            </div>
+          )}
+
+          <button
+            type="submit"
+            className="login-submit-btn"
+            disabled={
+              loading ||
+              (otpSent
+                ? otp.length !== 6
+                : !email.trim())
+            }
+          >
+            {!otpSent ? (
+              <>
+                <MdEmail className="button-icon" />
+                <span>
+                  {loading ? "Sending OTP..." : "Send OTP"}
+                </span>
+              </>
+            ) : (
+              <span>
+                {loading ? "Verifying..." : "Verify & Login"}
+              </span>
+            )}
+          </button>
+        </form>
 
         {message && (
-          <p
+          <div
             className={`status-message ${
-              message.includes("successfully") ? "success" : "error"
+              message.includes("successfully")
+                ? "success"
+                : "error"
             }`}
             role="status"
+            aria-live="polite"
           >
             {message}
-          </p>
+          </div>
         )}
+
+        <div className="login-footer">
+          Secure OTP-based authentication
+        </div>
       </div>
     </div>
   );

@@ -15,18 +15,19 @@ function Answer({ history, currentIndex, onPrevious, onNext }) {
 
   const aiCallType =
     aiRoute === "agent"
-      ? `Agent - AI call`
+      ? "Agent - AI call"
       : aiRoute === "direct_model"
-        ? `Model - AI call`
+        ? "Model - AI call"
         : "AI call unknown";
 
   return (
     <div className="answer-panel">
       <div className="answer-header">
-        <h3>AI Answer Panel</h3>
+        <h3>Answer</h3>
 
         <div className="page-navigation">
           <button
+            type="button"
             onClick={onPrevious}
             disabled={currentIndex <= 0}
             aria-label="Previous question"
@@ -39,6 +40,7 @@ function Answer({ history, currentIndex, onPrevious, onNext }) {
           </span>
 
           <button
+            type="button"
             onClick={onNext}
             disabled={currentIndex >= history.length - 1}
             aria-label="Next question"
@@ -50,11 +52,16 @@ function Answer({ history, currentIndex, onPrevious, onNext }) {
 
       {currentItem ? (
         <div className="answer-content">
-          <h4>Question {currentIndex + 1}</h4>
-          <p className="answer-question">{currentItem.question}</p>
+          <div className="answer-question">
+            <strong>Question {currentIndex + 1}:</strong>
+            <span>{currentItem.question}</span>
+          </div>
 
-          <h4>AI Answer</h4>
-          <div className="answer-text">{currentItem.answer}</div>
+          <h4>Answer</h4>
+
+          <div className="answer-text">
+            {currentItem.answer}
+          </div>
 
           {!currentItem.streaming && (
             <div className="performance-summary">

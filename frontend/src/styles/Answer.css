@@ -1,54 +1,65 @@
 
+/* Main answer panel */
 .answer-panel {
   flex: 1;
   min-width: 0;
   min-height: 0;
   height: 100%;
   box-sizing: border-box;
+
   display: flex;
   flex-direction: column;
-  padding: 24px;
+
+  padding: 12px;
   overflow: hidden;
+
   background: #374151;
   border: 1px solid #477fca;
   border-radius: 10px;
+
   color: #f9fafb;
-  font-family: Arial, sans-serif;
+  font-family: inherit;
 }
 
+/* Header */
 .answer-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding-bottom: 16px;
+  gap: 10px;
+
+  padding: 0 0 9px;
   border-bottom: 1px solid #596579;
+  flex-shrink: 0;
 }
 
 .answer-header h3 {
   margin: 0;
-  font-size: 20px;
+  font-size: 19px;
   font-weight: 700;
 }
 
+/* Previous / next navigation */
 .page-navigation {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 9px;
 }
 
 .page-navigation button {
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
+
   border: none;
   border-radius: 6px;
+
   background: #2563eb;
   color: white;
   cursor: pointer;
-  transition: background 0.2s ease;
 }
 
 .page-navigation button:hover:not(:disabled) {
@@ -63,60 +74,90 @@
 }
 
 .page-navigation span {
-  min-width: 48px;
+  min-width: 42px;
   text-align: center;
   font-size: 14px;
   font-weight: 600;
   color: #e5e7eb;
 }
 
+/* Answer content area */
 .answer-content {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  padding: 24px 8px;
+  overflow-x: hidden;
+
+  padding: 12px 6px;
+  scrollbar-width: thin;
+  scrollbar-color: #64748b #293548;
 }
 
-.answer-content h4 {
+/* Question displayed on one line where space permits */
+.answer-question {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+
   margin: 0 0 12px;
+  padding: 8px 12px;
+
+  background: #293548;
+  border-left: 3px solid #3b82f6;
+  border-radius: 5px;
+
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.answer-question strong {
+  flex-shrink: 0;
+  color: #93c5fd;
+  font-weight: 700;
+}
+
+.answer-question span {
+  color: #f9fafb;
+  font-weight: 600;
+}
+
+/* Answer heading */
+.answer-content h4 {
+  margin: 12px 0 7px;
   font-size: 16px;
   font-weight: 700;
   color: #93c5fd;
 }
 
-.answer-question {
-  margin: 0 0 28px;
-  padding: 16px;
-  background: #293548;
-  border-left: 4px solid #3b82f6;
-  border-radius: 6px;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.7;
-  overflow-wrap: anywhere;
-}
-
+/* Actual answer text */
 .answer-text {
   font-size: 15px;
-  font-weight: 700;
-  line-height: 1.8;
+  font-weight: 500;
+  line-height: 1.65;
+
   color: #f3f4f6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
+/* Performance summary */
 .performance-summary {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-top: 18px;
-  padding: 10px 12px;
+
+  margin-top: 12px;
+  padding: 8px 10px;
+
   border: 1px solid #475569;
-  border-radius: 8px;
+  border-radius: 7px;
   background: #293548;
+
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .summary-time {
@@ -142,20 +183,23 @@
   color: #86efac;
 }
 
+/* Empty state */
 .answer-placeholder {
   flex: 1;
   min-height: 0;
+
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+
   text-align: center;
-  padding: 24px;
+  padding: 12px;
 }
 
 .answer-placeholder h3 {
-  margin: 0 0 12px;
-  font-size: 22px;
+  margin: 0 0 8px;
+  font-size: 21px;
   font-weight: 700;
   color: #f9fafb;
 }
@@ -165,17 +209,28 @@
   max-width: 420px;
   color: #cbd5e1;
   font-size: 15px;
-  font-weight: 600;
-  line-height: 1.6;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
+/* Answer scrollbar */
+.answer-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.answer-content::-webkit-scrollbar-thumb {
+  background: #64748b;
+  border-radius: 6px;
+}
+
+.answer-content::-webkit-scrollbar-track {
+  background: #293548;
+}
+
+/* Mobile layout */
 @media (max-width: 768px) {
   .answer-panel {
-    padding: 16px;
-  }
-
-  .answer-header {
-    align-items: flex-start;
+    padding: 9px;
   }
 
   .answer-header h3 {
@@ -187,12 +242,21 @@
   }
 
   .page-navigation button {
-    width: 32px;
-    height: 32px;
+    width: 30px;
+    height: 30px;
   }
 
   .answer-content {
-    padding: 20px 2px;
+    padding: 9px 3px;
+  }
+
+  .answer-question {
+    padding: 8px;
+    font-size: 14px;
+  }
+
+  .answer-text {
+    font-size: 14px;
   }
 
   .performance-summary {

@@ -1,4 +1,3 @@
-
 import "../styles/Answer.css";
 import { FaChevronLeft, FaChevronRight } from "react-icons/fa";
 
@@ -10,7 +9,7 @@ const renderFormattedAnswer = (answer) => {
   if (!answer) return null;
 
   const headingPattern =
-    /^(What it is:|Purpose:|Where we use it:|Project example:)$/i;
+    /^\*{0,2}\s*(What it is:|Purpose:|Where we use it:|Project example:)\s*\*{0,2}$/i;
 
   return answer.split(/\r?\n/).map((line, index) => {
     const trimmedLine = line.trim();
@@ -19,10 +18,12 @@ const renderFormattedAnswer = (answer) => {
       return <div key={index} className="answer-line-gap" />;
     }
 
-    if (headingPattern.test(trimmedLine)) {
+    const headingMatch = trimmedLine.match(headingPattern);
+
+    if (headingMatch) {
       return (
         <div key={index} className="answer-section-heading">
-          {trimmedLine}
+          {headingMatch[1]}
         </div>
       );
     }

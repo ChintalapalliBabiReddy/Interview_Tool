@@ -227,6 +227,28 @@
   background: #293548;
 }
 
+/* Side headings inside generated answer */
+.answer-section-heading {
+  color: #B0DD16;
+  font-size: 15px;
+  font-weight: 700;
+  margin-top: 16px;
+  margin-bottom: 5px;
+}
+
+/* Normal answer paragraphs */
+.answer-paragraph {
+  color: #f3f4f6;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.65;
+}
+
+/* Spacing between answer sections */
+.answer-line-gap {
+  height: 12px;
+}
+
 /* Mobile layout */
 @media (max-width: 768px) {
   .answer-panel {

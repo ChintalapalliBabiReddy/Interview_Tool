@@ -2,7 +2,7 @@ const projectClient = require("../config/openaiClient");
 const sessionStore = require("../services/interviewSessionStore");
 const { performance } = require("node:perf_hooks");
 const { detectDomain } = require("../services/domainDetector");
-const { getDomainPrompt } = require("../prompts/domainPrompts");
+const { getDomainPrompt } = require("../prompts/domainPromptRegistry");
 
 const AGENT_NAME = process.env.AZURE_AI_AGENT_NAME || "my-first-agent";
 

@@ -1,17 +1,15 @@
-
 const projectClient = require("../config/openaiClient");
 const sessionStore = require("../services/interviewSessionStore");
 const { performance } = require("node:perf_hooks");
+const { detectDomain } = require("../services/domainDetector");
+const { getDomainPrompt } = require("../prompts/domainPrompts");
 
-const AGENT_NAME =
-  process.env.AZURE_AI_AGENT_NAME || "my-first-agent";
+const AGENT_NAME = process.env.AZURE_AI_AGENT_NAME || "my-first-agent";
 
-const MODEL_NAME =
-  process.env.AZURE_AI_MODEL_NAME || "gpt-4.1-mini";
+const MODEL_NAME = process.env.AZURE_AI_MODEL_NAME || "gpt-4.1-mini";
 
 const FIRST_REQUEST_USE_AGENT =
-  (process.env.AI_FIRST_REQUEST_USE_AGENT || "true").toLowerCase() ===
-  "true";
+  (process.env.AI_FIRST_REQUEST_USE_AGENT || "true").toLowerCase() === "true";
 
 const getOpenAIClient = () =>
   projectClient.getOpenAIClient({
@@ -21,8 +19,10 @@ const getOpenAIClient = () =>
     },
   });
 
-const buildInterviewPrompt = ({ question, session }) => {
+const buildInterviewPrompt = ({ question, session, domain = "general" }) => {
   const { name, company, round, resumeText } = session.details;
+
+  const domainPrompt = getDomainPrompt(domain);
 
   return `
 You are an expert interview-answer assistant helping a candidate prepare
@@ -41,6 +41,15 @@ ${resumeText}
 CURRENT INTERVIEW QUESTION
 ${question}
 </question>
+
+## DOMAIN-SPECIFIC TECHNICAL GUIDANCE
+
+Detected domain: ${domain}
+
+${domainPrompt}
+
+Follow the existing answer classification and required answer format below.
+Domain guidance supplements the main interview instructions; it does not replace them.
 
 ## 1. ROLE AND OBJECTIVE
 
@@ -598,7 +607,6 @@ Return only the formatted interview answer.
 `.trim();
 };
 
-
 const generateAnswer = async (req, res) => {
   const requestReceivedAt = performance.now();
 
@@ -616,10 +624,7 @@ const generateAnswer = async (req, res) => {
       });
     }
 
-    if (
-      typeof interviewSessionId !== "string" ||
-      !interviewSessionId.trim()
-    ) {
+    if (typeof interviewSessionId !== "string" || !interviewSessionId.trim()) {
       return res.status(400).json({
         success: false,
         message: "Interview session ID is required",
@@ -648,17 +653,26 @@ const generateAnswer = async (req, res) => {
 
     const currentQuestion = question.trim();
 
+    // Identify the technical domain of the current question.
+    const detectedDomain = detectDomain(currentQuestion);
+
+    // Build the interview prompt with domain-specific instructions.
     const interviewPrompt = buildInterviewPrompt({
       question: currentQuestion,
       session,
+      domain: detectedDomain,
+    });
+
+    console.log("[AI Domain Detected]", {
+      interviewSessionId,
+      domain: detectedDomain,
     });
 
     const openAIClient = getOpenAIClient();
 
     // Use the agent until its first successful response is saved.
     const useAgent =
-      FIRST_REQUEST_USE_AGENT &&
-      session.agentRequestCompleted !== true;
+      FIRST_REQUEST_USE_AGENT && session.agentRequestCompleted !== true;
 
     const routeDiagnostics = {
       aiRoute: useAgent ? "agent" : "direct_model",
@@ -697,7 +711,7 @@ const generateAnswer = async (req, res) => {
               type: "agent_reference",
             },
           },
-        }
+        },
       );
     } else {
       // Subsequent requests: call the model directly.
@@ -730,7 +744,7 @@ const generateAnswer = async (req, res) => {
           aiRequestSetupMs: Math.round(aiRequestDurationMs),
           ...routeDiagnostics,
         },
-      })}\n\n`
+      })}\n\n`,
     );
 
     let completed = false;
@@ -741,10 +755,7 @@ const generateAnswer = async (req, res) => {
         return;
       }
 
-      if (
-        event.type === "response.output_text.delta" &&
-        event.delta
-      ) {
+      if (event.type === "response.output_text.delta" && event.delta) {
         if (firstTextAt === null && event.delta.trim().length > 0) {
           firstTextAt = performance.now();
 
@@ -752,12 +763,10 @@ const generateAnswer = async (req, res) => {
             `data: ${JSON.stringify({
               type: "timing",
               metrics: {
-                backendFirstTextMs: Math.round(
-                  firstTextAt - requestReceivedAt
-                ),
+                backendFirstTextMs: Math.round(firstTextAt - requestReceivedAt),
                 ...routeDiagnostics,
               },
-            })}\n\n`
+            })}\n\n`,
           );
         }
 
@@ -767,7 +776,7 @@ const generateAnswer = async (req, res) => {
           `data: ${JSON.stringify({
             type: "delta",
             text: event.delta,
-          })}\n\n`
+          })}\n\n`,
         );
       }
 
@@ -786,9 +795,7 @@ const generateAnswer = async (req, res) => {
     }
 
     if (!completed) {
-      throw new Error(
-        "The AI stream ended without successful completion"
-      );
+      throw new Error("The AI stream ended without successful completion");
     }
 
     streamCompletedAt ??= performance.now();
@@ -800,22 +807,19 @@ const generateAnswer = async (req, res) => {
       answerText,
       {
         markAgentRequestCompleted: useAgent,
-      }
+      },
     );
 
     if (!exchangeSaved) {
       throw new Error(
-        "Interview session expired before the exchange could be saved"
+        "Interview session expired before the exchange could be saved",
       );
     }
 
-    const totalBackendDurationMs =
-      streamCompletedAt - requestReceivedAt;
+    const totalBackendDurationMs = streamCompletedAt - requestReceivedAt;
 
     const aiStreamingDurationMs =
-      firstTextAt === null
-        ? null
-        : streamCompletedAt - firstTextAt;
+      firstTextAt === null ? null : streamCompletedAt - firstTextAt;
 
     const metrics = {
       conversationCreationMs: null,
@@ -836,14 +840,14 @@ const generateAnswer = async (req, res) => {
       `data: ${JSON.stringify({
         type: "metrics",
         metrics,
-      })}\n\n`
+      })}\n\n`,
     );
 
     res.write(
       `data: ${JSON.stringify({
         type: "done",
         diagnostics: routeDiagnostics,
-      })}\n\n`
+      })}\n\n`,
     );
 
     res.end();
@@ -867,7 +871,7 @@ const generateAnswer = async (req, res) => {
           `data: ${JSON.stringify({
             type: "error",
             message: "Failed to generate an answer",
-          })}\n\n`
+          })}\n\n`,
         );
         res.end();
       }

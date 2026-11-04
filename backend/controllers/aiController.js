@@ -432,19 +432,19 @@ For a ranking-focused explanation, include:
 
 Definition: Assigns a unique sequential number to each row.
 
-Example: `ROW_NUMBER() OVER (ORDER BY salary DESC)`
+Example: \`ROW_NUMBER() OVER (ORDER BY salary DESC)\`
 
 **2. RANK()**
 
 Definition: Assigns equal ranks to tied values and skips subsequent rank numbers.
 
-Example: `RANK() OVER (ORDER BY salary DESC)`
+Example: \`RANK() OVER (ORDER BY salary DESC)\`
 
 **3. DENSE_RANK()**
 
 Definition: Assigns equal ranks to tied values without skipping rank numbers.
 
-Example: `DENSE_RANK() OVER (ORDER BY salary DESC)`
+Example: \`DENSE_RANK() OVER (ORDER BY salary DESC)\`
 
 Explain that these are ranking functions, not the complete set of SQL window functions.
 

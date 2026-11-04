@@ -59,7 +59,7 @@ const DOMAIN_RULES = {
   emailSupport: [/\bemail support\b/i, /\bemail process\b/i, /\bcustomer support emails?\b/i],
   chatSupport: [/\bchat support\b/i, /\blive chat\b/i, /\bchat process\b/i, /\bchat handling\b/i],
   telecalling: [/\btelecalling\b/i, /\btele caller\b/i, /\btelemarketing\b/i, /\bcalling process\b/i],
-  collections: [/\bcollections process\b/i, /\bdebt collections?\b/i, /\bcollections agent\b/i, /\bcollections calls?\b/i, /\boverdue payment collection\b/i],
+  collections: [/\bcollections calling process\b/i, /\bcollections process\b/i, /\bdebt collections?\b/i, /\bcollections agent\b/i, /\bcollections calls?\b/i, /\boverdue payment collection\b/i],
   customerService: [/\bcustomer service\b/i, /\bcustomer satisfaction\b/i, /\bservice recovery\b/i, /\bcustomer retention\b/i],
   customerSupport: [/\bcustomer support\b/i, /\bsupport tickets?\b/i, /\bticket resolution\b/i, /\bsupport lifecycle\b/i, /\bsla management\b/i],
 };
@@ -69,7 +69,7 @@ const DOMAIN_PRIORITY = [
   "recordToReport", "procureToPay", "orderToCash", "accountsPayable",
   "accountsReceivable", "financialPlanningAnalysis", "financialReconciliation",
   "financialReporting", "internalAudit", "externalAudit", "payrollAccounting",
-  "generalLedger", "gst", "taxation", "accounting",
+  "accounting", "generalLedger", "gst", "taxation",
 
   // Non-IT - Banking & Insurance
   "insuranceUnderwriting", "insuranceClaims", "investmentOperations",
@@ -78,15 +78,14 @@ const DOMAIN_PRIORITY = [
   "retailBanking", "bankingOperations",
 
   // Non-IT - HR
-  "itRecruitment", "nonItRecruitment", "talentAcquisition", "recruitment",
+  "nonItRecruitment", "itRecruitment", "talentAcquisition", "recruitment",
   "payrollProcessing", "learningAndDevelopment", "performanceManagement",
   "employeeRelations", "hrCompliance", "hrOperations", "hrGeneralist",
 
   // Non-IT - BPO & Customer Support
   "qualityAnalystBpo", "contactCenterOperations", "technicalSupportProcess",
   "bpoNonVoiceProcess", "bpoVoiceProcess", "internationalProcess",
-  "domesticProcess", "emailSupport", "chatSupport", "telecalling",
-  "collections", "customerService", "customerSupport",
+  "domesticProcess", "emailSupport", "chatSupport", "collections", "telecalling", "customerService", "customerSupport",
 ];
 
 function detectNonITDomain(question) {

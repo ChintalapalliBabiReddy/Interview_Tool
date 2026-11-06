@@ -35,7 +35,7 @@
 
 .answer-header h3 {
   margin: 0;
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 700;
 }
 
@@ -47,8 +47,8 @@
 }
 
 .page-navigation button {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
 
   display: inline-flex;
   align-items: center;
@@ -76,7 +76,7 @@
 .page-navigation span {
   min-width: 42px;
   text-align: center;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #e5e7eb;
 }
@@ -93,21 +93,21 @@
   scrollbar-color: #64748b #293548;
 }
 
-/* Question displayed on one line where space permits */
+/* Question */
 .answer-question {
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
   gap: 8px;
 
-  margin: 0 0 12px;
-  padding: 8px 12px;
+  margin: 0 0 14px;
+  padding: 9px 12px;
 
   background: #293548;
   border-left: 3px solid #3b82f6;
   border-radius: 5px;
 
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -123,23 +123,37 @@
   font-weight: 600;
 }
 
-/* Answer heading */
-.answer-content h4 {
-  margin: 12px 0 7px;
-  font-size: 16px;
-  font-weight: 700;
-  color: #93c5fd;
-}
-
 /* Actual answer text */
 .answer-text {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 500;
-  line-height: 1.65;
+  line-height: 1.7;
 
   color: #f3f4f6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+/* Normal answer paragraphs */
+.answer-paragraph {
+  color: #f3f4f6;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* Heading displayed inline with its explanation */
+.answer-section-heading {
+  display: inline;
+  color: #B0DD16;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+/* Spacing between answer sections */
+.answer-line-gap {
+  height: 14px;
 }
 
 /* Performance summary */
@@ -149,14 +163,14 @@
   align-items: center;
   gap: 8px;
 
-  margin-top: 12px;
-  padding: 8px 10px;
+  margin-top: 14px;
+  padding: 9px 10px;
 
   border: 1px solid #475569;
   border-radius: 7px;
   background: #293548;
 
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.5;
 }
 
@@ -227,28 +241,6 @@
   background: #293548;
 }
 
-/* Side headings inside generated answer */
-.answer-section-heading {
-  color: #B0DD16;
-  font-size: 15px;
-  font-weight: 700;
-  margin-top: 16px;
-  margin-bottom: 5px;
-}
-
-/* Normal answer paragraphs */
-.answer-paragraph {
-  color: #f3f4f6;
-  font-size: 15px;
-  font-weight: 500;
-  line-height: 1.65;
-}
-
-/* Spacing between answer sections */
-.answer-line-gap {
-  height: 12px;
-}
-
 /* Mobile layout */
 @media (max-width: 768px) {
   .answer-panel {
@@ -256,7 +248,7 @@
   }
 
   .answer-header h3 {
-    font-size: 17px;
+    font-size: 18px;
   }
 
   .page-navigation {
@@ -274,11 +266,13 @@
 
   .answer-question {
     padding: 8px;
-    font-size: 14px;
+    font-size: 15px;
   }
 
-  .answer-text {
-    font-size: 14px;
+  .answer-text,
+  .answer-paragraph,
+  .answer-section-heading {
+    font-size: 16px;
   }
 
   .performance-summary {

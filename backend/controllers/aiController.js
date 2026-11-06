@@ -1,3 +1,4 @@
+
 const projectClient = require("../config/openaiClient");
 const sessionStore = require("../services/interviewSessionStore");
 const { performance } = require("node:perf_hooks");
@@ -12,15 +13,22 @@ const MODEL_NAME = process.env.AZURE_AI_MODEL_NAME || "gpt-4.1-mini";
 const FIRST_REQUEST_USE_AGENT =
   (process.env.AI_FIRST_REQUEST_USE_AGENT || "true").toLowerCase() === "true";
 
-const getOpenAIClient = () =>
+// Create a client based on the selected AI route.
+// Agent client includes agentName.
+// Direct-model client must NOT include agentName.
+const getOpenAIClient = (useAgent = false) =>
   projectClient.getOpenAIClient({
     azureConfig: {
       allowPreview: true,
-      agentName: AGENT_NAME,
+      ...(useAgent ? { agentName: AGENT_NAME } : {}),
     },
   });
 
-const buildInterviewPrompt = ({ question, session, domain = "general" }) => {
+const buildInterviewPrompt = ({
+  question,
+  session,
+  domain = "general",
+}) => {
   const { name, company, round, resumeText } = session.details;
 
   const domainPrompt = getDomainPrompt(domain);
@@ -65,7 +73,10 @@ const generateAnswer = async (req, res) => {
       });
     }
 
-    if (typeof interviewSessionId !== "string" || !interviewSessionId.trim()) {
+    if (
+      typeof interviewSessionId !== "string" ||
+      !interviewSessionId.trim()
+    ) {
       return res.status(400).json({
         success: false,
         message: "Interview session ID is required",
@@ -97,7 +108,7 @@ const generateAnswer = async (req, res) => {
     // Identify the technical domain of the current question.
     const detectedDomain = detectDomain(currentQuestion);
 
-    // Build the interview prompt with domain-specific instructions.
+    // Build only the dynamic interview prompt.
     const interviewPrompt = buildInterviewPrompt({
       question: currentQuestion,
       session,
@@ -109,11 +120,13 @@ const generateAnswer = async (req, res) => {
       domain: detectedDomain,
     });
 
-    const openAIClient = getOpenAIClient();
-
-    // Use the agent until its first successful response is saved.
+    // Use the Agent until its first successful response is saved.
     const useAgent =
-      FIRST_REQUEST_USE_AGENT && session.agentRequestCompleted !== true;
+      FIRST_REQUEST_USE_AGENT &&
+      session.agentRequestCompleted !== true;
+
+    // Select the correct client configuration.
+    const openAIClient = getOpenAIClient(useAgent);
 
     const routeDiagnostics = {
       aiRoute: useAgent ? "agent" : "direct_model",
@@ -138,9 +151,8 @@ const generateAnswer = async (req, res) => {
     let stream;
 
     if (useAgent) {
-      // First request: call the Foundry agent.
-      // Configure SYSTEM_INSTRUCTIONS in this Agent's Instructions setting
-      // in Azure AI Foundry; the request sends only dynamic interview input.
+      // First request: use Azure AI Foundry Agent.
+      // Permanent system instructions must be configured in the Agent.
       stream = await openAIClient.responses.create(
         {
           conversation: session.conversationId,
@@ -157,8 +169,8 @@ const generateAnswer = async (req, res) => {
         },
       );
     } else {
-      // Subsequent requests: call the model directly.
-      // Supply the previous exchanges explicitly.
+      // Subsequent requests: use direct model without agent configuration.
+      // Supply permanent instructions separately.
       const history = (session.aiHistory || []).map((item) => ({
         role: item.role,
         content: item.content,
@@ -199,7 +211,10 @@ const generateAnswer = async (req, res) => {
         return;
       }
 
-      if (event.type === "response.output_text.delta" && event.delta) {
+      if (
+        event.type === "response.output_text.delta" &&
+        event.delta
+      ) {
         if (firstTextAt === null && event.delta.trim().length > 0) {
           firstTextAt = performance.now();
 
@@ -207,7 +222,9 @@ const generateAnswer = async (req, res) => {
             `data: ${JSON.stringify({
               type: "timing",
               metrics: {
-                backendFirstTextMs: Math.round(firstTextAt - requestReceivedAt),
+                backendFirstTextMs: Math.round(
+                  firstTextAt - requestReceivedAt
+                ),
                 ...routeDiagnostics,
               },
             })}\n\n`,
@@ -239,12 +256,14 @@ const generateAnswer = async (req, res) => {
     }
 
     if (!completed) {
-      throw new Error("The AI stream ended without successful completion");
+      throw new Error(
+        "The AI stream ended without successful completion"
+      );
     }
 
     streamCompletedAt ??= performance.now();
 
-    // Save the exchange and mark agent completion only after success.
+    // Save the exchange and mark Agent completion only after success.
     const exchangeSaved = await sessionStore.appendExchange(
       interviewSessionId,
       currentQuestion,
@@ -256,14 +275,17 @@ const generateAnswer = async (req, res) => {
 
     if (!exchangeSaved) {
       throw new Error(
-        "Interview session expired before the exchange could be saved",
+        "Interview session expired before the exchange could be saved"
       );
     }
 
-    const totalBackendDurationMs = streamCompletedAt - requestReceivedAt;
+    const totalBackendDurationMs =
+      streamCompletedAt - requestReceivedAt;
 
     const aiStreamingDurationMs =
-      firstTextAt === null ? null : streamCompletedAt - firstTextAt;
+      firstTextAt === null
+        ? null
+        : streamCompletedAt - firstTextAt;
 
     const metrics = {
       conversationCreationMs: null,

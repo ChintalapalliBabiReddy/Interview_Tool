@@ -215,10 +215,6 @@ Purpose:
 
 Explain their respective purposes.
 
-Examples:
-
-Provide one practical example for each concept.
-
 Key differences:
 
 Present the important differences in a concise Markdown table.
@@ -427,10 +423,6 @@ Use these exact headings:
 What it is:
 
 Define the main concept clearly.
-
-Purpose:
-
-Explain why it is used.
 
 Types:
 
